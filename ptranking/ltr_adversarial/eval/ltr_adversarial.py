@@ -17,6 +17,10 @@ from ptranking.ltr_adversarial.pointwise.irgan_point import IRGAN_Point, IRGAN_P
 from ptranking.ltr_adversarial.pairwise.irgan_pair   import IRGAN_Pair, IRGAN_PairParameter
 from ptranking.ltr_adversarial.listwise.irgan_list   import IRGAN_List, IRGAN_ListParameter
 
+from ptranking.ltr_adversarial.pointwise.irfgan_point import IRFGAN_Point, IRFGAN_PointParameter
+from ptranking.ltr_adversarial.pairwise.irfgan_pair import IRFGAN_Pair, IRFGAN_PairParameter
+from ptranking.ltr_adversarial.listwise.irfgan_list import IRFGAN_List, IRFGAN_ListParameter
+
 from ptranking.metric.metric_utils import metric_results_to_string
 from ptranking.ltr_adhoc.eval.eval_utils import ndcg_at_ks, ndcg_at_k
 from ptranking.ltr_adversarial.eval.ad_parameter import AdDataSetting, AdEvalSetting, AdScoringFunctionParameter
@@ -64,6 +68,29 @@ class AdLTREvaluator(LTREvaluator):
                                      ad_training_order=ad_para_dict['ad_training_order'], PL=ad_para_dict['PL'],
                                      shuffle_ties=ad_para_dict['shuffle_ties'], repTrick=ad_para_dict['repTrick'],
                                      dropLog=ad_para_dict['dropLog'])
+
+        elif model_id == 'IRFGAN_Point':
+            ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict,
+                                             f_div_id = ad_para_dict['f_div_id'],
+                                             d_epoches=ad_para_dict['d_epoches'], g_epoches=ad_para_dict['g_epoches'],
+                                             ad_training_order=ad_para_dict['ad_training_order'])
+        elif model_id == 'IRFGAN_Pair':
+            ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict,
+                                             f_div_id=ad_para_dict['f_div_id'],
+                                             sampling_str='BT', sigma=1.0)
+        elif model_id == 'IRFGAN_List':
+            '''
+            eval_dict, data_dict, sf_para_dict=None, f_div_id='KL', temperature=None, d_epoches=1, g_epoches=1, samples_per_query=5, top_k=5,
+                 ad_training_order='GD', shuffle_ties=True, PL=True, repTrick=True, dropLog=False, optimal_train=False
+            '''
+            ad_machine = IRFGAN_List(eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict,
+                                     f_div_id=ad_para_dict['f_div_id'],
+                                    temperature=ad_para_dict['temperature'],
+                                    d_epoches=ad_para_dict['d_epoches'], g_epoches=ad_para_dict['g_epoches'],
+                                    samples_per_query=ad_para_dict['samples_per_query'], top_k=ad_para_dict['top_k'],
+                                    ad_training_order=ad_para_dict['ad_training_order'], PL=ad_para_dict['PL'],
+                                    shuffle_ties=ad_para_dict['shuffle_ties'], repTrick=ad_para_dict['repTrick'],
+                                    dropLog=ad_para_dict['dropLog'])
         else:
             raise NotImplementedError
 

@@ -24,11 +24,11 @@ if __name__ == '__main__':
     
     (2) Adversarial Optimization
     -----------------------------------------------------------------------------------------
-    | Pointwise | IRGAN_Point                                                              |
+    | Pointwise | IRGAN_Point % IRFGAN_Point                                                |
     -----------------------------------------------------------------------------------------
-    | Pairwise  | IRGAN_Pair                                                               |
+    | Pairwise  | IRGAN_Pair % IRFGAN_Pair                                                  |
     -----------------------------------------------------------------------------------------
-    | Listwise  | IRGAN_List                                                               |
+    | Listwise  | IRGAN_List % IRFGAN_List                                                  |
     -----------------------------------------------------------------------------------------
     
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
     evaluator = AdLTREvaluator()
 
-    to_run_models = ['IRGAN_Pair']
+    to_run_models = ['IRFGAN_Point'] # IRGAN_Point | IRGAN_Pair  IRFGAN_Point| IRFGAN_Pair
 
     for model_id in to_run_models:
         evaluator.run(debug=debug, model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output, grid_search=grid_search)
