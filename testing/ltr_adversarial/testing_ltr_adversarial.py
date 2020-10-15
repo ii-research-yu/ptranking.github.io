@@ -66,11 +66,7 @@ if __name__ == '__main__':
 
     evaluator = AdLTREvaluator()
 
-<<<<<<< HEAD
     to_run_models = ['IRFGAN_Point'] # IRGAN_Point | IRGAN_Pair  IRFGAN_Point| IRFGAN_Pair
-=======
-    to_run_models = ['IRGAN_Point', 'IRGAN_Pair']
->>>>>>> 4fb9555a84086ea9939b1d5b326773b20edc69b0
 
     for model_id in to_run_models:
         evaluator.run(debug=debug, model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output, grid_search=grid_search)
