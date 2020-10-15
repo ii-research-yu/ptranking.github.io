@@ -75,10 +75,20 @@ class IRFGAN_Pair(AdversarialMachine):
             if gpu: batch_ranking = batch_ranking.type(tensor)
 
             tmp_batch_label = torch.squeeze(batch_label, dim=0)
+
             if torch.unique(tmp_batch_label).size(0) <2: # check unique values, say all [1, 1, 1] generates no pairs
                 continue
 
-            true_head_inds, true_tail_inds = generate_true_pairs(sorted_std_labels=torch.sort(tmp_batch_label, descending=True)[0], num_pairs=num_samples_per_query, qid=qid, dict_weighted_clipped_pos_diffs=dict_buffer)
+            ## record the original indices generate_true_pairs() relies on sorted tmp_batch_label
+            ranking_size = tmp_batch_label.size(0)
+            original_inds = torch.arange(ranking_size).type(tensor)
+            sorted_std_labels, sorted_inds = torch.sort(tmp_batch_label, descending=True)
+            sorted_original_inds = original_inds[sorted_inds]
+
+            tmp_true_head_inds, tmp_true_tail_inds = generate_true_pairs(sorted_std_labels=sorted_std_labels, num_pairs=num_samples_per_query, qid=qid, dict_weighted_clipped_pos_diffs=dict_buffer)
+
+            ## convert to original indices
+            true_head_inds, true_tail_inds = sorted_original_inds[tmp_true_head_inds], sorted_original_inds[tmp_true_tail_inds]
 
             batch_preds = generator.predict(batch_ranking, train=True)  # [batch, size_ranking]
 
