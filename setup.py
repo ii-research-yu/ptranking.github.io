@@ -1,10 +1,14 @@
 import setuptools
 
-long_description = ''
+from os import path
+
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
 install_requires = [
     'numpy',
-    'scikit-learn',
+    #'scikit-learn',
     'tqdm',
     #'torch >= 1.6.0', # todo torch-gpu
     #'torchvision',
@@ -20,7 +24,7 @@ setuptools.setup(
     description="A library of scalable and extendable implementations of typical learning-to-rank methods based on PyTorch.",
     license="MIT License",
     keywords=['Learning-to-rank', 'PyTorch'],
-    url="https://ptranking.github.io",
+    url="https://github.com/wildltr/ptranking",
     packages=setuptools.find_namespace_packages(include=["ptranking", "ptranking.*"]),
     long_description=long_description,
     long_description_content_type='text/markdown',

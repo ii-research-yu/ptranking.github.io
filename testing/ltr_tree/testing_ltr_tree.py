@@ -38,20 +38,23 @@ if __name__ == '__main__':
     """
 
     ''' selected dataset & location of the adopted data '''
-    data_id = 'MQ2008_Super'
+    #data_id = 'MQ2008_Super'
+    data_id = 'MSLRWEB30K'
 
-    dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
+    #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
     #dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
+    #dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
+    dir_data = '/Users/dryuhaitao/WorkBench/Corpus/Learning2Rank/MSLR-WEB30K/'
 
     #data_id  = 'Istella_S'
     #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/ISTELLA_L2R/'
 
     ''' output directory '''
-    #dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
+    dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/Listwise/'
     #dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
-    dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
+    #dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
 
-    debug = True  # with a debug mode, we can make a quick test, e.g., check whether the model can operate or not
+    debug = False  # with a debug mode, we can make a quick test, e.g., check whether the model can operate or not
 
     grid_search = False  # with grid_search, we can explore the effects of different hyper-parameters of a model
 
