@@ -78,11 +78,7 @@ if __name__ == '__main__':
         #dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
         #dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
 
-<<<<<<< HEAD
-    to_run_models = ['IRFGAN_Point'] # IRGAN_Point | IRGAN_Pair  IRFGAN_Point| IRFGAN_Pair
-=======
         grid_search = False # with grid_search, we can explore the effects of different hyper-parameters of a model
->>>>>>> 1bba06703f1eb76539a1f4d47523ba01e262aac5
 
         for model_id in models_to_run:
             evaluator.run(debug=debug, model_id=model_id, data_id=data_id, dir_data=dir_data, dir_output=dir_output, grid_search=grid_search)
