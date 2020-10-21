@@ -49,13 +49,13 @@ if __name__ == '__main__':
 
     debug = True  # in a debug mode, we just check whether the model can operate
 
-    config_with_json = False  # specify configuration with json files or not
+    config_with_json = True  # specify configuration with json files or not
 
     models_to_run = [
         #'IRGAN_Point',
         #'IRGAN_Pair',
         #'IRGAN_List'
-        'IRFGAN_Pair'
+        'IRFGAN_List'
     ]
 
     evaluator = AdLTREvaluator()
@@ -63,7 +63,9 @@ if __name__ == '__main__':
     if config_with_json:  # specify configuration with json files
         # the directory of json files
         #dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/ecir2021/mq2008_json/'
-        dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/ecir2021/mq2008_semi_json/'
+        #dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/ecir2021/mq2008_semi_json/'
+
+        dir_json = '/Users/dryuhaitao/WorkBench/Dropbox/CodeBench/GitPool/irgan_ptranking/testing/ltr_adversarial/json/'
 
         for model_id in models_to_run:
             evaluator.run(debug=debug, model_id=model_id, config_with_json=config_with_json, dir_json=dir_json)

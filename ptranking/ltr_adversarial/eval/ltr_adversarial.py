@@ -268,7 +268,7 @@ class AdLTREvaluator(LTREvaluator):
     def per_epoch_validation(self, ranker, curr_metric_val, fold_optimal_metric_val, curr_epoch, id_str, fold_optimal_checkpoint, epochs):
         info_str = ' '.join([str(curr_epoch), ' ', id_str, ' - nDCG@k - ', str(curr_metric_val)])
 
-        if (curr_metric_val > fold_optimal_metric_val) or \
+        if (1 == curr_epoch) or (curr_metric_val > fold_optimal_metric_val) or \
                 (curr_epoch == epochs and curr_metric_val == fold_optimal_metric_val):  # we need at least a reference, in case all zero
             print('\t', info_str)
             fold_optimal_metric_val = curr_metric_val

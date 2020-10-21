@@ -175,7 +175,8 @@ class IRGAN_Pair(AdversarialMachine):
 
             # generated_data[qid] = (sample_pos_inds, sample_neg_inds)
             # convert 2-d index matrix into 1-d index matrix
-            return (np.squeeze(sample_pos_inds, axis=1), np.squeeze(sample_neg_inds, axis=1))
+            #return (np.squeeze(sample_pos_inds, axis=1), np.squeeze(sample_neg_inds, axis=1))
+            return (torch.squeeze(sample_pos_inds, dim=1), torch.squeeze(sample_neg_inds, dim=1))
         else:
             return None
 
