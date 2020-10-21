@@ -55,7 +55,7 @@ if __name__ == '__main__':
         #'IRGAN_Point',
         #'IRGAN_Pair',
         #'IRGAN_List'
-        'IRFGAN_List'
+        'IRFGAN_Point'
     ]
 
     evaluator = AdLTREvaluator()

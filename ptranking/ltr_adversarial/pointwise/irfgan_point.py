@@ -23,8 +23,8 @@ from ptranking.ltr_global import global_gpu as gpu, global_device as device
 
 class IRFGAN_Point(AdversarialMachine):
     ''''''
-    def __init__(self, eval_dict, data_dict, sf_para_dict=None, f_div_id='KL', d_epoches=None, g_epoches=None,
-                 ad_training_order=None):
+    def __init__(self, eval_dict, data_dict, sf_para_dict=None, f_div_id='KL',
+                 d_epoches=None, g_epoches=None, ad_training_order=None):
         super(IRFGAN_Point, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
 
         self.activation_f, self.conjugate_f = get_f_divergence_functions(f_div_id)
@@ -291,10 +291,9 @@ class IRFGAN_PointParameter(ModelParameter):
         ad_para_dict = given_para_dict if given_para_dict is not None else self.ad_para_dict
 
         s1 = ':' if log else '_'
-        d_epoches, g_epoches, f_div_id, ad_training_order = ad_para_dict['d_epoches'], ad_para_dict['g_epoches'],\
-                                                       ad_para_dict['f_div_id'], ad_para_dict['ad_training_order']
+        f_div_id = ad_para_dict['f_div_id']
 
-        point_irfgan_paras_str = s1.join([str(d_epoches), str(g_epoches), f_div_id, ad_training_order])
+        point_irfgan_paras_str = f_div_id
 
         return point_irfgan_paras_str
 
@@ -307,25 +306,22 @@ class IRFGAN_PointParameter(ModelParameter):
                 json_dict = json.load(json_file)
 
             choice_samples_per_query = json_dict['samples_per_query']
-            choice_ad_training_order = json_dict['ad_training_order']
+            #choice_ad_training_order = json_dict['ad_training_order']
             choice_f_div_id = json_dict['f_div']
+            '''
             d_g_epoch_strings = json_dict['d_g_epoch']
             choice_d_g_epoch = []
             for d_g_epoch_str in d_g_epoch_strings:
                 epoch_arr = d_g_epoch_str.split('-')
                 choice_d_g_epoch.append((int(epoch_arr[0]), int(epoch_arr[1])))
+            '''
         else:
             choice_samples_per_query = [5]
-            choice_ad_training_order = ['DG']  # GD for irganlist DG for point/pair
+            #choice_ad_training_order = ['DG']  # GD for irganlist DG for point/pair
             choice_f_div_id = ['KL'] if self.debug else ['KL']  #
-            choice_d_g_epoch = [(1, 1)] if self.debug else [(1, 1)] # discriminator-epoches vs. generator-epoches
+            #choice_d_g_epoch = [(1, 1)] if self.debug else [(1, 1)] # discriminator-epoches vs. generator-epoches
 
-        for d_g_epoches, samples_per_query, ad_training_order, f_div_id in \
-                product(choice_d_g_epoch, choice_samples_per_query, choice_ad_training_order, choice_f_div_id):
-            d_epoches, g_epoches = d_g_epoches
-
-            self.ad_para_dict = dict(model_id=self.model_id, d_epoches=d_epoches, g_epoches=g_epoches,
-                                samples_per_query=samples_per_query, f_div_id=f_div_id,
-                                ad_training_order=ad_training_order)
+        for samples_per_query, f_div_id in product(choice_samples_per_query, choice_f_div_id):
+            self.ad_para_dict = dict(model_id=self.model_id, samples_per_query=samples_per_query, f_div_id=f_div_id)
 
             yield self.ad_para_dict

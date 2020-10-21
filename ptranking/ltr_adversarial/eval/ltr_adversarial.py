@@ -71,9 +71,7 @@ class AdLTREvaluator(LTREvaluator):
 
         elif model_id == 'IRFGAN_Point':
             ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict,
-                                             f_div_id = ad_para_dict['f_div_id'],
-                                             d_epoches=ad_para_dict['d_epoches'], g_epoches=ad_para_dict['g_epoches'],
-                                             ad_training_order=ad_para_dict['ad_training_order'])
+                                             f_div_id = ad_para_dict['f_div_id'])
         elif model_id == 'IRFGAN_Pair':
             ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict,
                                              f_div_id=ad_para_dict['f_div_id'],
