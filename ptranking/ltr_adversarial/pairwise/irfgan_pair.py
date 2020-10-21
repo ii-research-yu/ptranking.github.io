@@ -22,7 +22,7 @@ from ptranking.ltr_adversarial.util.pair_sampling import generate_true_pairs, sa
 from ptranking.utils.pytorch.pt_extensions import Gaussian_Integral_0_Inf
 apply_Gaussian_Integral_0_Inf = Gaussian_Integral_0_Inf.apply
 
-from ptranking.ltr_global import global_gpu as gpu, tensor
+from ptranking.ltr_global import global_gpu as gpu, tensor, long_tensor
 
 class IRFGAN_Pair(AdversarialMachine):
     ''' '''
@@ -81,7 +81,7 @@ class IRFGAN_Pair(AdversarialMachine):
 
             ## record the original indices generate_true_pairs() relies on sorted tmp_batch_label
             ranking_size = tmp_batch_label.size(0)
-            original_inds = torch.arange(ranking_size).type(tensor)
+            original_inds = torch.arange(ranking_size).type(long_tensor)
             sorted_std_labels, sorted_inds = torch.sort(tmp_batch_label, descending=True)
             sorted_original_inds = original_inds[sorted_inds]
 

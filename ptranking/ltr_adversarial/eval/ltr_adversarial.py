@@ -169,7 +169,7 @@ class AdLTREvaluator(LTREvaluator):
                         d_vali_eval_tmp = ndcg_at_k(ranker=d_ranker, test_data=vali_data, k=vali_k, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
                         g_vali_eval_v, d_vali_eval_v = g_vali_eval_tmp.data.numpy(), d_vali_eval_tmp.data.numpy()
 
-                        if epoch_k > 1:
+                        if epoch_k >= 1: # = is required for the case of epoch-1 is the best
                             g_buffer, g_tmp_metric_val, g_tmp_epoch = \
                                 self.per_epoch_validation(ranker=g_ranker, curr_metric_val=g_vali_eval_v,
                                                           fold_optimal_metric_val=g_fold_optimal_ndcgk, curr_epoch=epoch_k,

@@ -23,6 +23,7 @@ if global_gpu: torch.cuda.set_device(gpu_id)
 # a uniform tensor type
 tensor      = torch.cuda.FloatTensor if global_gpu else torch.FloatTensor
 byte_tensor = torch.cuda.ByteTensor if global_gpu else torch.ByteTensor
+long_tensor = torch.cuda.LongTensor if global_gpu else torch.LongTensor
 
 # uniform constants
 torch_one, torch_half, torch_zero = tensor([1.0]), tensor([0.5]), tensor([0.0])
