@@ -45,7 +45,6 @@ class IRFGAN_Pair(AdversarialMachine):
             raise NotImplementedError
 
         sf_para_dict['ffnns']['apply_tl_af'] = True
-
         g_sf_para_dict = sf_para_dict
 
         d_sf_para_dict = copy.deepcopy(g_sf_para_dict)

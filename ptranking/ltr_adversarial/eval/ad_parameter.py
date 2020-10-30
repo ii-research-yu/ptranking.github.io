@@ -47,8 +47,8 @@ class AdScoringFunctionParameter(ScoringFunctionParameter):
 			choice_hd_hn_tl_af = ['S'] if self.debug else ['S']
 			choice_apply_tl_af = [True]  # True, False
 
-		for BN, RD, num_layers, af, apply_tl_af in product(
-				choice_BN, choice_RD, choice_layers, choice_hd_hn_tl_af, choice_apply_tl_af):
+		for BN, RD, num_layers, af, apply_tl_af in product(choice_BN, choice_RD, choice_layers,
+														   choice_hd_hn_tl_af, choice_apply_tl_af):
 			ffnns_para_dict = dict(
 				FBN=False, BN=BN, RD=RD, num_layers=num_layers, HD_AF=af, HN_AF=af, TL_AF=af, apply_tl_af=apply_tl_af)
 			sf_para_dict = dict()

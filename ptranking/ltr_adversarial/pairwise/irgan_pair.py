@@ -164,6 +164,10 @@ class IRGAN_Pair(AdversarialMachine):
             num_samples = min(num_pos, total_neg_inds.size()[0])
 
             batch_neg_probs = batch_prob[total_neg_inds[:, 0]]
+
+            if torch.isnan(batch_neg_probs).any():
+                return None
+
             tmp_neg_inds = torch.multinomial(batch_neg_probs, num_samples, replacement=False)
             sample_neg_inds = total_neg_inds[tmp_neg_inds]  # using the original indices within total_neg_inds rather than batch_neg_probs
 
