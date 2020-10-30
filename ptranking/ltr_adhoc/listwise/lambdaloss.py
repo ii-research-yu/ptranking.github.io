@@ -17,10 +17,11 @@ pages = {1313–1322},
 import torch
 from itertools import product
 
+from ptranking.data.data_utils import LABEL_TYPE
 from ptranking.base.ranker import NeuralRanker
-from ptranking.eval.parameter import ModelParameter
-from ptranking.metric.adhoc_metric import torch_ideal_dcg
-from ptranking.ltr_global import global_gpu as gpu, global_device as device, tensor, epsilon
+from ptranking.ltr_adhoc.eval.parameter import ModelParameter
+from ptranking.metric.adhoc_metric import torch_dcg_at_k
+from ptranking.ltr_global import global_device as device, tensor, epsilon
 
 
 LAMBDALOSS_TYPE = ['NDCG_Loss1', 'NDCG_Loss2', 'NDCG_Loss2++'] # todo add 'ARP_Loss1', 'ARP_Loss2',
@@ -62,30 +63,40 @@ class LambdaLoss(NeuralRanker):
     def __init__(self, sf_para_dict=None, model_para_dict=None):
         super(LambdaLoss, self).__init__(id='LambdaLoss', sf_para_dict=sf_para_dict)
         self.lambdaloss_dict = model_para_dict
-        self.multi_level_rele = False if model_para_dict['std_rele_is_permutation'] else True
         self.k, self.sigma, self.loss_type = model_para_dict['k'], model_para_dict['sigma'], model_para_dict['loss_type']
         if 'NDCG_Loss2++' == self.loss_type: self.mu = model_para_dict['mu']
 
-    def inner_train(self, batch_preds, batch_labels, **kwargs):
+    def inner_train(self, batch_preds, batch_stds, **kwargs):
         '''
         per-query training process
         :param batch_preds: [batch, ranking_size] each row represents the relevance predictions for documents within a ltr_adhoc
         :param batch_stds: [batch, ranking_size] each row represents the standard relevance grades for documents within a ltr_adhoc
         :return:
         '''
-        batch_preds_sorted, batch_preds_sorted_inds = torch.sort(batch_preds, dim=1, descending=True)  # sort documents according to the predicted relevance
-        batch_stds_sorted_via_preds = torch.gather(batch_labels, dim=1, index=batch_preds_sorted_inds)  # reorder batch_stds correspondingly so as to make it consistent. BTW, batch_stds[batch_preds_sorted_inds] only works with 1-D tensor
+        label_type = kwargs['label_type']
+        assert label_type == LABEL_TYPE.MultiLabel
 
-        batch_std_ranks = torch.arange(batch_preds.size(1)).type(tensor)
+        if 'presort' in kwargs and kwargs['presort']:
+            target_batch_preds, target_batch_stds = batch_preds, batch_stds
+        else:
+            target_batch_stds, batch_sorted_inds = torch.sort(batch_stds, dim=1, descending=True)
+            target_batch_preds = torch.gather(batch_preds, dim=1, index=batch_sorted_inds)
+
+        batch_preds_sorted, batch_preds_sorted_inds = torch.sort(target_batch_preds, dim=1, descending=True)  # sort documents according to the predicted relevance
+        batch_stds_sorted_via_preds = torch.gather(target_batch_stds, dim=1, index=batch_preds_sorted_inds)  # reorder batch_stds correspondingly so as to make it consistent. BTW, batch_stds[batch_preds_sorted_inds] only works with 1-D tensor
+
+        batch_std_ranks = torch.arange(target_batch_preds.size(1)).type(tensor)
         dists_1D = 1.0 / torch.log2(batch_std_ranks + 2.0)  # discount co-efficients
 
-        # assuming that batch_labels is pre-sorted, i.e., presort=True for efficiency
-        batch_idcgs = torch_ideal_dcg(batch_sorted_labels=batch_labels, gpu=gpu)
+        # ideal dcg values based on optimal order
+        batch_idcgs = torch_dcg_at_k(batch_sorted_labels=target_batch_stds)
 
-        if self.multi_level_rele:
+        if label_type == LABEL_TYPE.MultiLabel:
             batch_gains = torch.pow(2.0, batch_stds_sorted_via_preds) - 1.0
-        else:
+        elif label_type == LABEL_TYPE.Permutation:
             batch_gains = batch_stds_sorted_via_preds
+        else:
+            raise NotImplementedError
 
         batch_n_gains = batch_gains / batch_idcgs  # normalised gains
 
@@ -103,7 +114,7 @@ class LambdaLoss(NeuralRanker):
         log_weighted_probas = torch.log2(weighted_probas)
 
         # mask for truncation based on cutoff k
-        trunc_mask = torch.zeros((batch_preds.shape[1], batch_preds.shape[1]), dtype=torch.bool, device=device)
+        trunc_mask = torch.zeros((target_batch_preds.shape[1], target_batch_preds.shape[1]), dtype=torch.bool, device=device)
         trunc_mask[:self.k, :self.k] = 1
 
         if self.loss_type in ['NDCG_Loss2', 'NDCG_Loss2++']:

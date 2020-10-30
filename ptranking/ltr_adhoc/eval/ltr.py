@@ -6,19 +6,19 @@
 
 import os
 import sys
-import copy
 import datetime
 import numpy as np
 
 import torch
 
 #from tensorboardX import SummaryWriter
-from ptranking.eval.parameter import ModelParameter, DataSetting, EvalSetting, ScoringFunctionParameter
+from ptranking.base.ranker import LTRFRAME_TYPE
 from ptranking.utils.bigdata.BigPickle import pickle_save
 from ptranking.metric.metric_utils import metric_results_to_string
-from ptranking.data.data_utils import get_data_meta
+from ptranking.data.data_utils import get_data_meta, SPLIT_TYPE, LABEL_TYPE
 from ptranking.ltr_adhoc.eval.eval_utils import ndcg_at_ks, ndcg_at_k
-from ptranking.data.data_utils import LTRDataset, YAHOO_LTR, ISTELLA_LTR, MSLETOR_SEMI
+from ptranking.data.data_utils import LTRDataset, YAHOO_LTR, ISTELLA_LTR, MSLETOR_SEMI, MSLETOR_LIST
+from ptranking.ltr_adhoc.eval.parameter import ModelParameter, DataSetting, EvalSetting, ScoringFunctionParameter
 
 from ptranking.ltr_adhoc.pointwise.rank_mse   import RankMSE
 from ptranking.ltr_adhoc.pairwise.ranknet     import RankNet
@@ -32,8 +32,6 @@ from ptranking.ltr_adhoc.listwise.wassrank.wassRank import WassRank, WassRankPar
 from ptranking.ltr_adhoc.listwise.lambdarank        import LambdaRank, LambdaRankParameter
 from ptranking.ltr_adhoc.listwise.lambdaloss import LambdaLoss, LambdaLossParameter
 
-from ptranking.ltr_adhoc.listwise.wassrank.wassRank import WassRank
-
 from ptranking.ltr_global import global_gpu as gpu, global_device as device, tensor
 
 LTR_ADHOC_MODEL = ['RankMSE',
@@ -44,8 +42,8 @@ class LTREvaluator():
     """
     The class for evaluating different ltr_adhoc methods.
     """
-    def __init__(self, id='LTR'):
-        self.id = id
+    def __init__(self, frame_id=LTRFRAME_TYPE.Adhoc):
+        self.frame_id = frame_id
 
     def display_information(self, data_dict, model_para_dict):
         """
@@ -59,21 +57,42 @@ class LTREvaluator():
 
     def check_consistency(self, data_dict, eval_dict, sf_para_dict):
         """
-        Check whether the settings are consistent with each other
-        :param data_dict:
-        :param eval_dict:
-        :param sf_para_dict:
-        :return:
+        Check whether the settings are reasonable in the context of adhoc learning-to-rank
         """
-        if data_dict['sample_rankings_per_q']>1: assert sf_para_dict['one_fits_all']['BN'] == False
+        ''' Part-1: data loading '''
 
-        if data_dict['data_id'] == 'Istella': assert eval_dict['do_validation'] is not True # since there is no validation data
+        if data_dict['data_id'] == 'Istella':
+            assert eval_dict['do_validation'] is not True # since there is no validation data
 
-        if data_dict['data_id'] in MSLETOR_SEMI: # given semi-supervised dataset
-            assert data_dict['unknown_as_zero'] # since the in-built ltr_hoc methods are also supervised models
+        if data_dict['data_id'] in MSLETOR_SEMI:
+            assert data_dict['train_presort'] is not True # due to the non-labeled documents
+            if data_dict['binary_rele']: # for unsupervised dataset, it is required for binarization due to '-1' labels
+                assert data_dict['unknown_as_zero']
+        else:
+            assert data_dict['unknown_as_zero'] is not True  # since there is no non-labeled documents
 
-        if data_dict['binary_rele'] and data_dict['data_id'] in MSLETOR_SEMI:
-            assert data_dict['unknown_as_zero'] # for unsupervised dataset, it is required for binarization due to '-1' labels
+        if data_dict['data_id'] in MSLETOR_LIST: # for which the standard ltr_adhoc of each query is unique
+            assert 1 == data_dict['train_batch_size']
+
+        if data_dict['scale_data']:
+            scaler_level = data_dict['scaler_level'] if 'scaler_level' in data_dict else None
+            assert not scaler_level== 'DATASET' # not supported setting
+
+        assert data_dict['validation_presort'] # Rule of thumb setting for adhoc learning-to-rank
+        assert data_dict['test_presort'] # Rule of thumb setting for adhoc learning-to-rank
+        assert 1 == data_dict['validation_batch_size'] # Rule of thumb setting for adhoc learning-to-rank
+        assert 1 == data_dict['test_batch_size'] # Rule of thumb setting for adhoc learning-to-rank
+
+        ''' Part-2: evaluation setting '''
+
+        if eval_dict['mask_label']: # True is aimed to use supervised data to mimic semi-supervised data by masking
+            assert not data_dict['data_id'] in MSLETOR_SEMI
+
+        ''' Part-1: network setting '''
+
+        if data_dict['train_batch_size']>1:
+            assert sf_para_dict['one_fits_all']['BN'] == False # a kind of feature normalization
+
 
     def determine_files(self, data_dict, fold_k=None):
         """
@@ -112,37 +131,19 @@ class LTREvaluator():
         """
         file_train, file_vali, file_test = self.determine_files(data_dict, fold_k=fold_k)
 
-        sample_rankings_per_q = data_dict['sample_rankings_per_q']
+        train_batch_size, train_presort = data_dict['train_batch_size'], data_dict['train_presort']
+        input_eval_dict = eval_dict if eval_dict['mask_label'] else None # required when enabling masking data
+        train_data = LTRDataset(file=file_train, split_type=SPLIT_TYPE.Train, batch_size=train_batch_size,
+                                shuffle=True, presort=train_presort, data_dict=data_dict, eval_dict=input_eval_dict)
 
-        if eval_dict['mask_label']: # enabling masking data as required
-            train_data = LTRDataset(train=True, file=file_train, sample_rankings_per_q=sample_rankings_per_q,
-                                    shuffle=True, data_dict=data_dict, eval_dict=eval_dict)
+        test_data = LTRDataset(file=file_test, split_type=SPLIT_TYPE.Test, shuffle=False, data_dict=data_dict,
+                               batch_size=data_dict['test_batch_size'])
+
+        if eval_dict['do_validation'] or eval_dict['do_summary']: # vali_data is required
+            vali_data = LTRDataset(file=file_vali, split_type=SPLIT_TYPE.Validation, shuffle=False,
+                                   batch_size=data_dict['validation_batch_size'], data_dict=data_dict)
         else:
-            train_data = LTRDataset(train=True, file=file_train, sample_rankings_per_q=sample_rankings_per_q,
-                                    shuffle=True, data_dict=data_dict)
-
-        if data_dict['data_id'] in MSLETOR_SEMI or eval_dict['mask_label']:
-            tmp_data_dict = copy.deepcopy(data_dict)
-            tmp_data_dict.update(dict(unknown_as_zero=False))
-            data_dict = tmp_data_dict
-
-        vali_data = None
-        if data_dict['scale_data'] and 'DATASET' == data_dict['scaler_level']:
-            train_scaler = train_data.get_scaler()
-
-            test_data = LTRDataset(train=False, file=file_test, sample_rankings_per_q=sample_rankings_per_q,
-                                   shuffle=False, data_dict=data_dict, given_scaler=train_scaler)
-
-            if eval_dict['do_validation'] or eval_dict['do_summary']:
-                vali_data = LTRDataset(train=False, file=file_vali, sample_rankings_per_q=sample_rankings_per_q,
-                                       shuffle=False, data_dict=data_dict, given_scaler=train_scaler)
-        else:
-            test_data  = LTRDataset(train=False, file=file_test, sample_rankings_per_q=sample_rankings_per_q,
-                                    shuffle=False, data_dict=data_dict)
-
-            if eval_dict['do_validation'] or eval_dict['do_summary']:
-                vali_data = LTRDataset(train=False, file=file_vali, sample_rankings_per_q=sample_rankings_per_q,
-                                       shuffle=False, data_dict=data_dict)
+            vali_data = None
 
         return train_data, test_data, vali_data
 
@@ -245,7 +246,7 @@ class LTREvaluator():
 
         sf_str = self.sf_parameter.to_para_string(log=True)
 
-        data_eval_str = self.data_setting.to_data_setting_string(log=True) + self.eval_setting.to_eval_setting_string(log=True)
+        data_eval_str = self.data_setting.to_data_setting_string(log=True) +'\n'+ self.eval_setting.to_eval_setting_string(log=True)
 
         with open(file=dir_root + '/' + data_id + '_max.txt', mode='w') as max_writer:
             max_writer.write('\n\n'.join([data_eval_str, sf_str, log_para_str, metric_results_to_string(max_cv_avg_scores, cutoffs)]))
@@ -256,27 +257,23 @@ class LTREvaluator():
         epoch_loss = tensor([0.0])
 
         if 'em_label' in model_para_dict and model_para_dict['em_label']:
-            for qid, batch_rankings, batch_stds, torch_batch_stds_hot, batch_cnts in train_data.iter_hot():  # _, [batch, ranking_size, num_features], [batch, ranking_size]
-                if gpu: batch_rankings, batch_stds, torch_batch_stds_hot, batch_cnts = batch_rankings.to(device), batch_stds.to(device), torch_batch_stds_hot.to(device), batch_cnts.to(device)
-
-                batch_loss, stop_training = ranker.train(batch_rankings, batch_stds, qid=qid, torch_batch_stds_hot=torch_batch_stds_hot, batch_cnts=batch_cnts, epoch_k=epoch_k)
-
-                if stop_training:
-                    break
-                else:
-                    epoch_loss += batch_loss.item()
-
+            raise NotImplementedError
         else:
+            presort = train_data.presort
+            label_type = train_data.label_type
             for qid, batch_rankings, batch_stds in train_data: # _, [batch, ranking_size, num_features], [batch, ranking_size]
                 if gpu: batch_rankings, batch_stds = batch_rankings.to(device), batch_stds.to(device)
 
                 if reranking:
-                    # in case the standard labels of the initial retrieval are all zeros providing no optimization information. Meanwhile, some models (e.g., lambdaRank) may fail to train
                     if torch.nonzero(batch_stds).size(0) <= 0:
+                        '''
+                        In case the standard labels of the initial retrieval are all zeros providing no optimization
+                        information. Meanwhile, some models (e.g., lambdaRank) may fail to train
+                        '''
                         continue
 
-                batch_loss, stop_training = ranker.train(batch_rankings, batch_stds, qid=qid, epoch_k=epoch_k)
-
+                batch_loss, stop_training = ranker.train(batch_rankings, batch_stds, qid=qid, epoch_k=epoch_k,
+                                                         presort=presort, label_type=label_type)
                 if stop_training:
                     break
                 else:
@@ -293,8 +290,8 @@ class LTREvaluator():
         :param model_para_dict: settings w.r.t. the ltr_adhoc model
         :return:
         """
-        self.check_consistency(data_dict, eval_dict, sf_para_dict)
         self.display_information(data_dict, model_para_dict)
+        self.check_consistency(data_dict, eval_dict, sf_para_dict)
         self.setup_eval(data_dict, eval_dict, sf_para_dict, model_para_dict)
 
         model_id = model_para_dict['model_id']
@@ -329,7 +326,8 @@ class LTREvaluator():
 
                 if (do_summary or do_vali) and (epoch_k % log_step == 0 or epoch_k == 1):  # stepwise check
                     if do_vali:     # per-step validation score
-                        vali_eval_tmp = ndcg_at_k(ranker=ranker, test_data=vali_data, k=vali_k, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                        vali_eval_tmp = ndcg_at_k(ranker=ranker, test_data=vali_data, k=vali_k,
+                                                  label_type=self.data_setting.data_dict['label_type'])
                         vali_eval_v = vali_eval_tmp.data.numpy()
                         if epoch_k > 1:  # further validation comparison
                             curr_vali_ndcg = vali_eval_v
@@ -344,12 +342,12 @@ class LTREvaluator():
 
                     if do_summary:  # summarize per-step performance w.r.t. train, test
                         fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs,
-                                                                           multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                                                                  label_type=self.data_setting.data_dict['label_type'])
                         np_fold_k_epoch_k_train_ndcg_ks = fold_k_epoch_k_train_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_train_ndcg_ks.data.numpy()
                         list_fold_k_train_eval_track.append(np_fold_k_epoch_k_train_ndcg_ks)
 
                         fold_k_epoch_k_test_ndcg_ks  = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs,
-                                                                           multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                                                                  label_type=self.data_setting.data_dict['label_type'])
                         np_fold_k_epoch_k_test_ndcg_ks  = fold_k_epoch_k_test_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_test_ndcg_ks.data.numpy()
                         list_fold_k_test_eval_track.append(np_fold_k_epoch_k_test_ndcg_ks)
 
@@ -393,7 +391,7 @@ class LTREvaluator():
                 fold_optimal_ranker = ranker
 
             torch_fold_ndcg_ks = ndcg_at_ks(ranker=fold_optimal_ranker, test_data=test_data, ks=cutoffs,
-                                                     multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                                            label_type=self.data_setting.data_dict['label_type'])
             fold_ndcg_ks = torch_fold_ndcg_ks.data.numpy()
 
             performance_list = [model_id + ' Fold-' + str(fold_k)]      # fold-wise performance
@@ -445,11 +443,11 @@ class LTREvaluator():
             np_epoch_loss = epoch_loss.cpu().numpy() if gpu else epoch_loss.data.numpy()
             list_losses.append(np_epoch_loss)
 
-            test_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs, multi_level_rele=True)
+            test_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs, label_type=LABEL_TYPE.MultiLabel)
             np_test_ndcg_ks = test_ndcg_ks.data.numpy()
             list_test_ndcgs.append(np_test_ndcg_ks)
 
-            train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs, multi_level_rele=True)
+            train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs, label_type=LABEL_TYPE.MultiLabel)
             np_train_ndcg_ks = train_ndcg_ks.data.numpy()
             list_train_ndcgs.append(np_train_ndcg_ks)
 
@@ -494,38 +492,20 @@ class LTREvaluator():
     def iterate_scoring_function_setting(self, data_dict=None):
         return self.sf_parameter.grid_search(data_dict=data_dict)
 
-    def set_model_setting(self, model_id=None, data_id=None, dir_json=None, debug=False):
+    def set_model_setting(self, model_id=None, dir_json=None, debug=False):
         """
         Initialize the parameter class for a specified model
         :param debug:
         :param model_id:
-        :param data_id:
         :return:
         """
-        if model_id in ['RankMSE', 'RankNet', 'ListNet', 'ListMLE', 'RankCosine']:
-            # the 1st type with model_id, where ModelParameter is sufficient
+        if model_id in ['RankMSE', 'RankNet', 'ListNet', 'ListMLE', 'RankCosine']: # ModelParameter is sufficient
             self.model_parameter = ModelParameter(model_id=model_id)
-        elif model_id in ['LambdaRank', 'ApproxNDCG', 'DirectOpt', 'MarginLambdaLoss']:
-            # the 2nd type, where the information of the type of relevance label is required.
-            data_meta = get_data_meta(data_id=data_id)  # add meta-information
-            if data_meta['multi_level_rele']:
-                if dir_json is not None:
-                    para_json = dir_json + model_id + "Parameter.json"
-                    self.model_parameter = globals()[model_id + "Parameter"](para_json=para_json, std_rele_is_permutation=False)
-                else:
-                    self.model_parameter = globals()[model_id + "Parameter"](debug=debug, std_rele_is_permutation=False)
-            else: # the case like MSLETOR_LIST
-                if dir_json is not None:
-                    para_json = dir_json + model_id + "Parameter.json"
-                    self.model_parameter = globals()[model_id + "Parameter"](para_json=para_json, std_rele_is_permutation=True)
-                else:
-                    self.model_parameter = globals()[model_id + "Parameter"](debug=debug, std_rele_is_permutation=True)
         else:
-            # the 3rd type, where debug-mode enables quick test
             if dir_json is not None:
                 para_json = dir_json + model_id + "Parameter.json"
                 self.model_parameter = globals()[model_id + "Parameter"](para_json=para_json)
-            else:
+            else: # the 3rd type, where debug-mode enables quick test
                 self.model_parameter = globals()[model_id + "Parameter"](debug=debug)
 
     def get_default_model_setting(self):
@@ -562,7 +542,7 @@ class LTREvaluator():
         self.set_scoring_function_setting(debug=debug, data_dict=data_dict)
         sf_para_dict = self.get_default_scoring_function_setting()
 
-        self.set_model_setting(debug=debug, model_id=model_id, data_id=data_id)
+        self.set_model_setting(debug=debug, model_id=model_id)
         model_para_dict = self.get_default_model_setting()
 
         self.declare_global(model_id=model_id)
@@ -588,12 +568,12 @@ class LTREvaluator():
             self.set_eval_setting(debug=debug, eval_json=eval_json)
             self.set_data_setting(data_json=data_json)
             self.set_scoring_function_setting(sf_json=sf_json)
-            self.set_model_setting(model_id=model_id, data_id=self.data_setting.data_id, dir_json=dir_json)
+            self.set_model_setting(model_id=model_id, dir_json=dir_json)
         else:
             self.set_eval_setting(debug=debug, dir_output=dir_output)
             self.set_data_setting(debug=debug, data_id=data_id, dir_data=dir_data)
             self.set_scoring_function_setting(debug=debug)
-            self.set_model_setting(debug=debug, model_id=model_id, data_id=data_id)
+            self.set_model_setting(debug=debug, model_id=model_id)
 
         self.declare_global(model_id=model_id)
 

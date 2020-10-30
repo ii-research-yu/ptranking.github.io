@@ -11,16 +11,20 @@ import numpy as np
 
 from ptranking.utils.bigdata.BigPickle import pickle_save
 
+from ptranking.base.ranker import LTRFRAME_TYPE
 from ptranking.ltr_adhoc.eval.ltr import LTREvaluator
-
 from ptranking.ltr_adversarial.pointwise.irgan_point import IRGAN_Point, IRGAN_PointParameter
 from ptranking.ltr_adversarial.pairwise.irgan_pair   import IRGAN_Pair, IRGAN_PairParameter
 from ptranking.ltr_adversarial.listwise.irgan_list   import IRGAN_List, IRGAN_ListParameter
 
+<<<<<<< HEAD
 from ptranking.ltr_adversarial.pointwise.irfgan_point import IRFGAN_Point, IRFGAN_PointParameter
 from ptranking.ltr_adversarial.pairwise.irfgan_pair import IRFGAN_Pair, IRFGAN_PairParameter
 from ptranking.ltr_adversarial.listwise.irfgan_list import IRFGAN_List, IRFGAN_ListParameter
 
+=======
+from ptranking.data.data_utils import MSLETOR_SEMI
+>>>>>>> 25ae88c1bc3f2ff3d0ecde9c3cd89c91bfc50a19
 from ptranking.metric.metric_utils import metric_results_to_string
 from ptranking.ltr_adhoc.eval.eval_utils import ndcg_at_ks, ndcg_at_k
 from ptranking.ltr_adversarial.eval.ad_parameter import AdDataSetting, AdEvalSetting, AdScoringFunctionParameter
@@ -32,18 +36,39 @@ class AdLTREvaluator(LTREvaluator):
     """
     The class for evaluating different adversarial adversarial ltr methods.
     """
-    def __init__(self, id='AD_LTR'):
-        super(AdLTREvaluator, self).__init__(id=id)
+    def __init__(self, frame_id=LTRFRAME_TYPE.Adversarial):
+        super(AdLTREvaluator, self).__init__(frame_id=frame_id)
 
-    def check_consistency(self, data_dict, eval_dict):
+    def check_consistency(self, data_dict, eval_dict, sf_para_dict):
         """
-        Display some information.
-        :param data_dict:
-        :param eval_dict:
-        :return:
+        Check whether the settings are reasonable in the context of adversarial learning-to-rank
         """
-        assert 1 == data_dict['sample_rankings_per_q']  # the required setting w.r.t. adversarial LTR
-        if data_dict['data_id'] == 'Istella': assert eval_dict['do_validation'] is not True  # since there is no validation data
+        ''' Part-1: data loading '''
+        assert data_dict['train_presort'] is not True  # due to the non-labeled documents
+        assert 1 == data_dict['train_batch_size']  # the required setting w.r.t. adversarial LTR
+
+        if data_dict['data_id'] == 'Istella':
+            assert eval_dict['do_validation'] is not True  # since there is no validation data
+
+        if data_dict['data_id'] in MSLETOR_SEMI:
+            assert data_dict['unknown_as_zero'] is not True  # use original data
+
+        if data_dict['scale_data']:
+            scaler_level = data_dict['scaler_level'] if 'scaler_level' in data_dict else None
+            assert not scaler_level == 'DATASET'  # not supported setting
+
+        assert data_dict['validation_presort']  # Rule of thumb, as validation and test data are for metric-performance
+        assert data_dict['test_presort']  # Rule of thumb, as validation and test data are for metric-performance
+        assert 1 == data_dict['validation_batch_size']  # Rule of thumb, as validation and test data are for metric-performance
+        assert 1 == data_dict['test_batch_size']  # Rule of thumb, as validation and test data are for metric-performance
+
+        ''' Part-2: evaluation setting '''
+        if eval_dict['mask_label']:  # True is aimed to use supervised data to mimic semi-supervised data by masking
+            assert not data_dict['data_id'] in MSLETOR_SEMI
+
+        ''' Part-1: network setting '''
+        assert sf_para_dict['ffnns']['BN'] == False # since the feature matrix will dynamically change
+
 
     def get_ad_machine(self, eval_dict=None, data_dict=None, sf_para_dict=None, ad_para_dict=None):
         """
@@ -103,8 +128,8 @@ class AdLTREvaluator(LTREvaluator):
         :param sf_para_dict:
         :return:
         """
-        self.check_consistency(data_dict, eval_dict)
         self.display_information(data_dict, model_para_dict=ad_para_dict)
+        self.check_consistency(data_dict, eval_dict, sf_para_dict=sf_para_dict)
         self.setup_eval(data_dict, eval_dict, sf_para_dict, model_para_dict=ad_para_dict)
 
         model_id = ad_para_dict['model_id']
@@ -159,8 +184,10 @@ class AdLTREvaluator(LTREvaluator):
 
                 if (do_summary or do_vali) and (epoch_k % log_step == 0 or epoch_k == 1):  # stepwise check
                     if do_vali:
-                        g_vali_eval_tmp = ndcg_at_k(ranker=g_ranker, test_data=vali_data, k=vali_k, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
-                        d_vali_eval_tmp = ndcg_at_k(ranker=d_ranker, test_data=vali_data, k=vali_k, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                        g_vali_eval_tmp = ndcg_at_k(ranker=g_ranker, test_data=vali_data, k=vali_k,
+                                                    label_type=self.data_setting.data_dict['label_type'])
+                        d_vali_eval_tmp = ndcg_at_k(ranker=d_ranker, test_data=vali_data, k=vali_k,
+                                                    label_type=self.data_setting.data_dict['label_type'])
                         g_vali_eval_v, d_vali_eval_v = g_vali_eval_tmp.data.numpy(), d_vali_eval_tmp.data.numpy()
 
                         if epoch_k >= 1: # = is required for the case of epoch-1 is the best
@@ -225,11 +252,28 @@ class AdLTREvaluator(LTREvaluator):
                     d_ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k), 'D']) + '.pkl')
                     d_fold_optimal_ranker = d_ranker
 
+<<<<<<< HEAD
                 g_torch_fold_ndcg_ks = ndcg_at_ks(ranker=g_fold_optimal_ranker, test_data=test_data, ks=cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
                 g_fold_ndcg_ks = g_torch_fold_ndcg_ks.data.numpy()
 
                 d_torch_fold_ndcg_ks = ndcg_at_ks(ranker=d_fold_optimal_ranker, test_data=test_data, ks=cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
                 d_fold_ndcg_ks = d_torch_fold_ndcg_ks.data.numpy()
+=======
+            else: # using default G # buffer the model after a fixed number of training-epoches if no validation is deployed
+                g_ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k), 'G']) + '.pkl')
+                g_fold_optimal_ranker = g_ranker
+
+                d_ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k), 'D']) + '.pkl')
+                d_fold_optimal_ranker = d_ranker
+
+            g_torch_fold_ndcg_ks = ndcg_at_ks(ranker=g_fold_optimal_ranker, test_data=test_data, ks=cutoffs,
+                                              label_type=self.data_setting.data_dict['label_type'])
+            g_fold_ndcg_ks = g_torch_fold_ndcg_ks.data.numpy()
+
+            d_torch_fold_ndcg_ks = ndcg_at_ks(ranker=d_fold_optimal_ranker, test_data=test_data, ks=cutoffs,
+                                              label_type=self.data_setting.data_dict['label_type'])
+            d_fold_ndcg_ks = d_torch_fold_ndcg_ks.data.numpy()
+>>>>>>> 25ae88c1bc3f2ff3d0ecde9c3cd89c91bfc50a19
 
                 performance_list = [' Fold-' + str(fold_k)]  # fold-wise performance
                 performance_list.append('Generator')
@@ -282,11 +326,13 @@ class AdLTREvaluator(LTREvaluator):
     def per_epoch_summary_step1(self, ranker, train_data, list_fold_k_train_eval_track,
                           test_data, list_fold_k_test_eval_track, vali_eval_v, list_fold_k_vali_eval_track, cutoffs, do_vali):
 
-        fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+        fold_k_epoch_k_train_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=train_data, ks=cutoffs,
+                                                  label_type=self.data_setting.data_dict['label_type'])
         np_fold_k_epoch_k_train_ndcg_ks = fold_k_epoch_k_train_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_train_ndcg_ks.data.numpy()
         list_fold_k_train_eval_track.append(np_fold_k_epoch_k_train_ndcg_ks)
 
-        fold_k_epoch_k_test_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+        fold_k_epoch_k_test_ndcg_ks = ndcg_at_ks(ranker=ranker, test_data=test_data, ks=cutoffs,
+                                                 label_type=self.data_setting.data_dict['label_type'])
         np_fold_k_epoch_k_test_ndcg_ks = fold_k_epoch_k_test_ndcg_ks.cpu().numpy() if gpu else fold_k_epoch_k_test_ndcg_ks.data.numpy()
         list_fold_k_test_eval_track.append(np_fold_k_epoch_k_test_ndcg_ks)
 
