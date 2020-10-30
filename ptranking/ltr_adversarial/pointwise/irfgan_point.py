@@ -11,7 +11,7 @@ from itertools import product
 import torch
 import torch.nn.functional as F
 
-from ptranking.eval.parameter import ModelParameter
+from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.ltr_adversarial.base.ad_machine import AdversarialMachine
 from ptranking.ltr_adversarial.util.point_sampling import generate_true_docs
 from ptranking.ltr_adversarial.pointwise.point_generator import Point_Generator

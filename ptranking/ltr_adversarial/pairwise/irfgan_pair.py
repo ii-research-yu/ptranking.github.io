@@ -11,7 +11,7 @@ from itertools import product
 
 import torch
 
-from ptranking.eval.parameter import ModelParameter
+from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.ltr_adversarial.base.ad_machine import AdversarialMachine
 from ptranking.ltr_adversarial.pointwise.point_generator import Point_Generator
 from ptranking.ltr_adversarial.util.f_divergence import get_f_divergence_functions

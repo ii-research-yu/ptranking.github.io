@@ -48,21 +48,12 @@ if __name__ == '__main__':
 	config_with_json = False # specify configuration with json files or not
 
 	models_to_run = [
-<<<<<<< HEAD
 		# 'RankMSE',
 		#'ApproxNDCG',
 		 'ListNet',
 		#'ListNet', 'ListMLE', 'ApproxNDCG', 'WassRank'
 		# 'ApproxNDCG',
 		# 'WassRank',
-=======
-		#'RankMSE',
-		#'LambdaRank',
-		#'ListMLE',
-		#'ListNet', 'ListMLE', 'ApproxNDCG', 'WassRank'
-		#'ApproxNDCG',
-		'WassRank',
->>>>>>> 25ae88c1bc3f2ff3d0ecde9c3cd89c91bfc50a19
 		# 'STListNet', 'LambdaLoss'
 	]
 

@@ -17,14 +17,11 @@ from ptranking.ltr_adversarial.pointwise.irgan_point import IRGAN_Point, IRGAN_P
 from ptranking.ltr_adversarial.pairwise.irgan_pair   import IRGAN_Pair, IRGAN_PairParameter
 from ptranking.ltr_adversarial.listwise.irgan_list   import IRGAN_List, IRGAN_ListParameter
 
-<<<<<<< HEAD
 from ptranking.ltr_adversarial.pointwise.irfgan_point import IRFGAN_Point, IRFGAN_PointParameter
 from ptranking.ltr_adversarial.pairwise.irfgan_pair import IRFGAN_Pair, IRFGAN_PairParameter
 from ptranking.ltr_adversarial.listwise.irfgan_list import IRFGAN_List, IRFGAN_ListParameter
 
-=======
 from ptranking.data.data_utils import MSLETOR_SEMI
->>>>>>> 25ae88c1bc3f2ff3d0ecde9c3cd89c91bfc50a19
 from ptranking.metric.metric_utils import metric_results_to_string
 from ptranking.ltr_adhoc.eval.eval_utils import ndcg_at_ks, ndcg_at_k
 from ptranking.ltr_adversarial.eval.ad_parameter import AdDataSetting, AdEvalSetting, AdScoringFunctionParameter
@@ -238,13 +235,13 @@ class AdLTREvaluator(LTREvaluator):
                                                  list_fold_k_vali_eval_track=d_list_fold_k_vali_eval_track)
 
                 if do_vali: # using the fold-wise optimal model for later testing based on validation data #
-                        g_buffered_model = '_'.join(['net_params_epoch', str(g_fold_optimal_epoch_val), 'G']) + '.pkl'
-                        g_ranker.load(self.dir_run + fold_optimal_checkpoint + '/' + g_buffered_model)
-                        g_fold_optimal_ranker = g_ranker
+                    g_buffered_model = '_'.join(['net_params_epoch', str(g_fold_optimal_epoch_val), 'G']) + '.pkl'
+                    g_ranker.load(self.dir_run + fold_optimal_checkpoint + '/' + g_buffered_model)
+                    g_fold_optimal_ranker = g_ranker
 
-                        d_buffered_model = '_'.join(['net_params_epoch', str(d_fold_optimal_epoch_val), 'D']) + '.pkl'
-                        d_ranker.load(self.dir_run + fold_optimal_checkpoint + '/' + d_buffered_model)
-                        d_fold_optimal_ranker = d_ranker
+                    d_buffered_model = '_'.join(['net_params_epoch', str(d_fold_optimal_epoch_val), 'D']) + '.pkl'
+                    d_ranker.load(self.dir_run + fold_optimal_checkpoint + '/' + d_buffered_model)
+                    d_fold_optimal_ranker = d_ranker
                 else: # using default G # buffer the model after a fixed number of training-epoches if no validation is deployed
                     g_ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k), 'G']) + '.pkl')
                     g_fold_optimal_ranker = g_ranker
@@ -252,28 +249,11 @@ class AdLTREvaluator(LTREvaluator):
                     d_ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k), 'D']) + '.pkl')
                     d_fold_optimal_ranker = d_ranker
 
-<<<<<<< HEAD
-                g_torch_fold_ndcg_ks = ndcg_at_ks(ranker=g_fold_optimal_ranker, test_data=test_data, ks=cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                g_torch_fold_ndcg_ks = ndcg_at_ks(ranker=g_fold_optimal_ranker, test_data=test_data, ks=cutoffs, label_type=self.data_setting.data_dict['label_type'])
                 g_fold_ndcg_ks = g_torch_fold_ndcg_ks.data.numpy()
 
-                d_torch_fold_ndcg_ks = ndcg_at_ks(ranker=d_fold_optimal_ranker, test_data=test_data, ks=cutoffs, multi_level_rele=self.data_setting.data_dict['multi_level_rele'], batch_mode=True)
+                d_torch_fold_ndcg_ks = ndcg_at_ks(ranker=d_fold_optimal_ranker, test_data=test_data, ks=cutoffs, label_type=self.data_setting.data_dict['label_type'])
                 d_fold_ndcg_ks = d_torch_fold_ndcg_ks.data.numpy()
-=======
-            else: # using default G # buffer the model after a fixed number of training-epoches if no validation is deployed
-                g_ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k), 'G']) + '.pkl')
-                g_fold_optimal_ranker = g_ranker
-
-                d_ranker.save(dir=self.dir_run + fold_optimal_checkpoint + '/', name='_'.join(['net_params_epoch', str(epoch_k), 'D']) + '.pkl')
-                d_fold_optimal_ranker = d_ranker
-
-            g_torch_fold_ndcg_ks = ndcg_at_ks(ranker=g_fold_optimal_ranker, test_data=test_data, ks=cutoffs,
-                                              label_type=self.data_setting.data_dict['label_type'])
-            g_fold_ndcg_ks = g_torch_fold_ndcg_ks.data.numpy()
-
-            d_torch_fold_ndcg_ks = ndcg_at_ks(ranker=d_fold_optimal_ranker, test_data=test_data, ks=cutoffs,
-                                              label_type=self.data_setting.data_dict['label_type'])
-            d_fold_ndcg_ks = d_torch_fold_ndcg_ks.data.numpy()
->>>>>>> 25ae88c1bc3f2ff3d0ecde9c3cd89c91bfc50a19
 
                 performance_list = [' Fold-' + str(fold_k)]  # fold-wise performance
                 performance_list.append('Generator')
