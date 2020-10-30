@@ -55,18 +55,15 @@ class IRFGAN_Pair(AdversarialMachine):
 
 
     def mini_max_train(self, train_data=None, generator=None, discriminator=None, d_epoches=1, g_epoches=1, dict_buffer=None):
-
         '''
         Here it can not use the way of training like irgan-pair (still relying on single documents rather thank pairs), since ir-fgan requires to sample with two distributions.
         '''
-
-        self.train_discriminator_generator_single_step(train_data=train_data, generator=generator, discriminator=discriminator, dict_buffer=dict_buffer)
-
-        stop_training = False
+        stop_training = self.train_discriminator_generator_single_step(train_data=train_data, generator=generator, discriminator=discriminator, dict_buffer=dict_buffer)
         return stop_training
 
 
     def train_discriminator_generator_single_step(self, train_data=None, generator=None, discriminator=None, num_samples_per_query=20, dict_buffer=None, **kwargs): # train both discriminator and generator with a single step per query
+        stop_training = False
         for entry in train_data:
             # todo assuming that unknown lable (i.e., -1) is converted to 0
 
@@ -93,6 +90,11 @@ class IRFGAN_Pair(AdversarialMachine):
 
             # todo determine how to activation
             point_preds = torch.squeeze(batch_preds)
+
+            if torch.isnan(point_preds).any():
+                print('Including NaN error.')
+                stop_training = True
+                return stop_training
 
             #--generate samples
             if 'SR' == self.sampling_str:
@@ -147,6 +149,8 @@ class IRFGAN_Pair(AdversarialMachine):
             generator.optimizer.zero_grad()
             g_batch_loss.backward()
             generator.optimizer.step()
+
+            return stop_training
 
     def reset_generator(self):
         self.generator.reset_parameters()

@@ -45,26 +45,16 @@ if __name__ == '__main__':
 
 	debug = True            # in a debug mode, we just check whether the model can operate
 
-	config_with_json = False # specify configuration with json files or not
+	config_with_json = True # specify configuration with json files or not
 
 	models_to_run = [
-<<<<<<< HEAD
-		# 'RankMSE',
-		#'ApproxNDCG',
-		 'ListNet',
-		#'ListNet', 'ListMLE', 'ApproxNDCG', 'WassRank'
-		# 'ApproxNDCG',
-		# 'WassRank',
-		# 'STListNet', 'LambdaLoss'
-=======
 		#'RankMSE',
 		#'LambdaRank',
 		#'ListNet', 'ListMLE',
 		'ApproxNDCG',
 		'WassRank',
 		'STListNet', 'LambdaLoss'
->>>>>>> 0e431e6f1aa2f83573a06fd5eeb3fdb6b3cd4845
-	]
+		]
 
 	evaluator = LTREvaluator()
 

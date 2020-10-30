@@ -142,7 +142,7 @@ class IRGAN_Pair(AdversarialMachine):
 
         # [1, ranking_size] -> [ranking_size]
         # [z, n] If input has n dimensions, then the resulting indices tensor out is of size (z×n), where z is the total number of non-zero elements in the input tensor.
-        pos_inds = torch.gt(torch.squeeze(used_batch_label), 0).nonzero()
+        pos_inds = torch.nonzero(torch.gt(torch.squeeze(used_batch_label), 0), as_tuple=False)
         num_pos = pos_inds.size()[0]
 
         if num_pos < 1:

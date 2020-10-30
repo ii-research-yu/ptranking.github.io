@@ -143,7 +143,8 @@ class IRGAN_Point(AdversarialMachine):
 
         # [1, ranking_size] -> [ranking_size]
         # [z, n] If input has n dimensions, then the resulting indices tensor out is of size (z×n), where z is the total number of non-zero elements in the input tensor.
-        all_pos_inds = torch.gt(torch.squeeze(used_batch_label), 0).nonzero()
+        #all_pos_inds = torch.gt(torch.squeeze(used_batch_label), 0).nonzero()
+        all_pos_inds = torch.nonzero(torch.gt(torch.squeeze(used_batch_label), 0), as_tuple=False)
         num_pos = all_pos_inds.size()[0]
 
         if num_pos < 1:
@@ -206,7 +207,7 @@ class IRGAN_Point(AdversarialMachine):
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
             if gpu: batch_ranking = batch_ranking.to(device)
 
-            pos_inds = torch.gt(torch.squeeze(batch_label), 0).nonzero()
+            pos_inds = torch.nonzero(torch.gt(torch.squeeze(batch_label), 0), as_tuple=False)
 
             #print('pos_inds', pos_inds)
             if pos_inds.size(0) < 1:

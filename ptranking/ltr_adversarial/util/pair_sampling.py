@@ -26,17 +26,18 @@ tor_zero = tensor([0.0])
 def get_weighted_clipped_pos_diffs(sorted_std_labels):
     #num_pos = torch.nonzero(sorted_std_labels).size(0)
     #print('sorted_std_labels', sorted_std_labels)
-    num_pos = torch.gt(sorted_std_labels, 0).nonzero().size(0) # supporting the case of including '-1'
+    #num_pos = torch.gt(sorted_std_labels, 0).nonzero().size(0) # supporting the case of including '-1'
+    num_pos = torch.nonzero(torch.gt(sorted_std_labels, 0), as_tuple=False).size(0) # supporting the case of including '-1'
 
     #total_items = sorted_std_labels.size(0)
-    total_items = torch.ge(sorted_std_labels, 0).nonzero().size(0)
+    total_items = torch.nonzero(torch.ge(sorted_std_labels, 0), as_tuple=False).size(0)
 
     mat_diffs = torch.unsqueeze(sorted_std_labels, dim=1) - torch.unsqueeze(sorted_std_labels, dim=0)
     pos_diffs = torch.where(mat_diffs < 0, tor_zero, mat_diffs)
     clipped_pos_diffs = pos_diffs[0:num_pos, 0:total_items]
     #print('clipped_pos_diffs', clipped_pos_diffs)
 
-    total_true_pairs = torch.nonzero(clipped_pos_diffs).size(0)
+    total_true_pairs = torch.nonzero(clipped_pos_diffs, as_tuple=False).size(0)
 
     r_discounts = torch.arange(total_items).type(tensor)
     r_discounts = torch.log2(2.0 + r_discounts)
@@ -63,7 +64,8 @@ def generate_true_pairs(sorted_std_labels, num_pairs, qid, dict_weighted_clipped
         else:
             res = torch.multinomial(weighted_clipped_pos_diffs.view(1, -1), num_pairs, replacement=False)
 
-        head_inds = res / total_items
+        #head_inds = res / total_items
+        head_inds = res // total_items
         tail_inds = res % total_items
         return head_inds, tail_inds
 
@@ -81,7 +83,8 @@ def generate_true_pairs(sorted_std_labels, num_pairs, qid, dict_weighted_clipped
 
         res = torch.squeeze(res)
 
-        head_inds = res / total_items
+        #head_inds = res / total_items
+        head_inds = res // total_items
         tail_inds = res % total_items
 
         return head_inds, tail_inds
@@ -122,14 +125,15 @@ def sample_points_Bernoulli(mat_probs, num_pairs):
     total_items = mat_probs.size(0)
     B = tdist.Binomial(1, mat_probs.view(1, -1))
     b_res = B.sample()
-    num_unique_pairs = torch.nonzero(b_res).size(0)
+    num_unique_pairs = torch.nonzero(b_res, as_tuple=False).size(0)
     if num_unique_pairs < num_pairs:
         res = torch.multinomial(b_res, num_pairs, replacement=True)
     else:
         res = torch.multinomial(b_res, num_pairs, replacement=False)
 
     res = torch.squeeze(res)
-    head_inds = res / total_items
+    #head_inds = res / total_items
+    head_inds = res // total_items
     tail_inds = res % total_items
 
     return head_inds, tail_inds
