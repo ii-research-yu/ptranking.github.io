@@ -168,6 +168,9 @@ class IRFGAN_Point(AdversarialMachine):
 
 
     def per_query_generation(self, qid, batch_ranking, batch_label, generator):
+        '''
+        todo with a predefined num_sample, and randomly sample
+        '''
 
         used_batch_label = batch_label
 

@@ -56,6 +56,10 @@ def get_weighted_clipped_pos_diffs(sorted_std_labels):
 
 
 def generate_true_pairs(sorted_std_labels, num_pairs, qid, dict_weighted_clipped_pos_diffs=None):
+    '''
+    todo use pure truth samples
+
+    '''
     if dict_weighted_clipped_pos_diffs is not None and qid in dict_weighted_clipped_pos_diffs:
         weighted_clipped_pos_diffs, total_true_pairs, total_items = dict_weighted_clipped_pos_diffs[qid]
         #k = min(num_pairs, total_true_pairs)

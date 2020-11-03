@@ -222,6 +222,7 @@ class IRFGAN_List(AdversarialMachine):
 
     def per_query_generation(self, qid=None, batch_ranking=None, batch_label=None, pos_and_neg=None, generator=None,
                              samples_per_query=None, shuffle_ties=None, top_k=None, temperature=None):
+        # todo should only support shuffle ties !!!
         '''
         :param qid:
         :param batch_ranking:
