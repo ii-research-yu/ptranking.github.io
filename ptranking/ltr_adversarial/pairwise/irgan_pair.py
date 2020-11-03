@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 import json
 import copy
 from itertools import product
@@ -13,7 +12,7 @@ from ptranking.ltr_adhoc.eval.parameter import ModelParameter
 from ptranking.ltr_adversarial.base.ad_player import AdversarialPlayer
 from ptranking.ltr_adversarial.base.ad_machine import AdversarialMachine
 
-from ptranking.ltr_global import global_gpu as gpu, global_device as device, torch_zero, torch_one, cpu_torch_one, cpu_torch_zero
+from ptranking.ltr_global import global_gpu as gpu, global_device as device, torch_zero, torch_one
 
 class IRGAN_Pair_Generator(AdversarialPlayer):
     def __init__(self, sf_para_dict=None, temperature=None):
@@ -141,47 +140,15 @@ class IRGAN_Pair(AdversarialMachine):
     def per_query_generation(self, qid, batch_ranking, generator, global_buffer):
         num_pos, num_neg_unk = global_buffer[qid]
 
-<<<<<<< HEAD
-        # [1, ranking_size] -> [ranking_size]
-        # [z, n] If input has n dimensions, then the resulting indices tensor out is of size (z×n), where z is the total number of non-zero elements in the input tensor.
-        pos_inds = torch.nonzero(torch.gt(torch.squeeze(used_batch_label), 0), as_tuple=False)
-        num_pos = pos_inds.size()[0]
-
-        if num_pos < 1:
-            return None
-
-        if num_pos < used_batch_label.size(1):
-=======
         if num_pos >= 1:
             valid_num = min(num_pos, num_neg_unk, self.samples_per_query)
             ranking_inds = torch.arange(batch_ranking.size(1))
->>>>>>> c3d88a325a14484d3e0b1fc77475a381f23fcc12
             '''
             intersection implementation (keeping consistent with the released irgan-tensorflow):
             remove the positive part, then sample to form pairs
             '''
             pos_inds = torch.randperm(num_pos)[0:valid_num]  # randomly select positive documents
 
-<<<<<<< HEAD
-            batch_neg_probs = batch_prob[total_neg_inds[:, 0]]
-
-            if torch.isnan(batch_neg_probs).any():
-                return None
-
-            tmp_neg_inds = torch.multinomial(batch_neg_probs, num_samples, replacement=False)
-            sample_neg_inds = total_neg_inds[tmp_neg_inds]  # using the original indices within total_neg_inds rather than batch_neg_probs
-
-            if num_samples < num_pos:
-                tmp_pos_inds = torch.multinomial(torch.ones(num_pos), num_samples=num_samples, replacement=False)
-                sample_pos_inds = pos_inds[tmp_pos_inds]
-            else:
-                sample_pos_inds = pos_inds
-
-            # generated_data[qid] = (sample_pos_inds, sample_neg_inds)
-            # convert 2-d index matrix into 1-d index matrix
-            #return (np.squeeze(sample_pos_inds, axis=1), np.squeeze(sample_neg_inds, axis=1))
-            return (torch.squeeze(sample_pos_inds, dim=1), torch.squeeze(sample_neg_inds, dim=1))
-=======
             batch_pred = generator.predict(batch_ranking)  # [batch, size_ranking]
             pred_probs = F.softmax(torch.squeeze(batch_pred), dim=0)
             neg_unk_probs = pred_probs[num_pos:]
@@ -190,7 +157,6 @@ class IRGAN_Pair(AdversarialMachine):
             neg_inds = ranking_inds[num_pos:][inner_neg_inds]
 
             return (pos_inds, neg_inds)
->>>>>>> c3d88a325a14484d3e0b1fc77475a381f23fcc12
         else:
             return None
 

@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Description
-
-"""
 import json
 import copy
 import numpy as np
@@ -16,33 +13,30 @@ from ptranking.ltr_adversarial.base.ad_machine import AdversarialMachine
 from ptranking.ltr_adversarial.pointwise.point_generator import Point_Generator
 from ptranking.ltr_adversarial.util.f_divergence import get_f_divergence_functions
 from ptranking.ltr_adversarial.pointwise.point_discriminator import Point_Discriminator
-
+from ptranking.data.data_utils import MSLETOR_SEMI
 from ptranking.ltr_adversarial.util.pair_sampling import generate_true_pairs, sample_points_Bernoulli
 
-from ptranking.utils.pytorch.pt_extensions import Gaussian_Integral_0_Inf
-apply_Gaussian_Integral_0_Inf = Gaussian_Integral_0_Inf.apply
 
 from ptranking.ltr_global import global_gpu as gpu, tensor, long_tensor
 
 class IRFGAN_Pair(AdversarialMachine):
     ''' '''
-    def __init__(self, eval_dict, data_dict, sf_para_dict=None, f_div_id='KL', sampling_str='BT', sigma=1.0):
+    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None, g_key='BT', sigma=1.0):
         super(IRFGAN_Pair, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
 
-        self.activation_f, self.conjugate_f = get_f_divergence_functions(f_div_id)
-        if sampling_str in ['BT']:
-            '''
-            (1) BT: the probability of observing a pair of ordered documents is formulated via Bradley-Terry model, i.e., p(d_i > d_j)=1/(1+exp(-sigma(s_i - s_j))), the default value of sigma is given as 1.0            
-            '''
-            self.sampling_str = sampling_str
-            self.sigma = sigma # only used w.r.t. SR
-        else:
-            '''
-            SR is not supported due to time-consuming
-            (2) SR: the relevance prediction of a document is regarded as the mean of a Gaussian score distribution with a shared smoothing variance. 
-                Thus, the probability of observing a pair of ordered documents is the integral of the difference of two Gaussian random variables, which is itself a Gaussian, cf. Eq-9 within the original paper.
-            '''
-            raise NotImplementedError
+        self.f_div_id = ad_para_dict['f_div_id']
+        self.samples_per_query = ad_para_dict['samples_per_query']
+        self.activation_f, self.conjugate_f = get_f_divergence_functions(self.f_div_id)
+        self.dict_diff = dict()
+
+        assert g_key=='BT'
+        '''
+        Underlying formulation of generation
+        (1) BT: the probability of observing a pair of ordered documents is formulated via Bradley-Terry model,
+         i.e., p(d_i > d_j)=1/(1+exp(-sigma(s_i - s_j))), the default value of sigma is given as 1.0            
+        '''
+        self.g_key = g_key
+        self.sigma = sigma # only used w.r.t. SR
 
         sf_para_dict['ffnns']['apply_tl_af'] = True
         g_sf_para_dict = sf_para_dict
@@ -53,38 +47,72 @@ class IRFGAN_Pair(AdversarialMachine):
         self.generator = Point_Generator(sf_para_dict=g_sf_para_dict)
         self.discriminator = Point_Discriminator(sf_para_dict=d_sf_para_dict)
 
+    def fill_global_buffer(self, train_data, dict_buffer=None):
+        ''' Buffer the number of positive documents, and the number of non-positive documents per query '''
+        assert train_data.presort is True  # this is required for efficient truth exampling
 
-    def mini_max_train(self, train_data=None, generator=None, discriminator=None, d_epoches=1, g_epoches=1, dict_buffer=None):
+        if train_data.data_id in MSLETOR_SEMI:
+            for entry in train_data:
+                qid, _, batch_label = entry[0], entry[1], entry[2]
+                if not qid in dict_buffer:
+                    pos_boolean_mat = torch.gt(batch_label, 0)
+                    num_pos = torch.sum(pos_boolean_mat)
+
+                    explicit_boolean_mat = torch.ge(batch_label, 0)
+                    num_explicit = torch.sum(explicit_boolean_mat)
+
+                    ranking_size = batch_label.size(1)
+                    num_neg_unk = ranking_size - num_pos
+                    num_unk = ranking_size - num_explicit
+
+                    num_unique_labels = torch.unique(batch_label).size(0)
+
+                    dict_buffer[qid] = (num_pos, num_explicit, num_neg_unk, num_unk, num_unique_labels)
+        else:
+            for entry in train_data:
+                qid, _, batch_label = entry[0], entry[1], entry[2]
+                if not qid in dict_buffer:
+                    pos_boolean_mat = torch.gt(batch_label, 0)
+                    num_pos = torch.sum(pos_boolean_mat)
+
+                    ranking_size = batch_label.size(1)
+
+                    num_explicit = ranking_size
+                    num_neg_unk = ranking_size - num_pos
+                    num_unk = 0
+
+                    num_unique_labels = torch.unique(batch_label).size(0)
+
+                    dict_buffer[qid] = (num_pos, num_explicit, num_neg_unk, num_unk, num_unique_labels)
+
+
+    def mini_max_train(self, train_data=None, generator=None, discriminator=None, global_buffer=None):
         '''
-        Here it can not use the way of training like irgan-pair (still relying on single documents rather thank pairs), since ir-fgan requires to sample with two distributions.
+        Here it can not use the way of training like irgan-pair (still relying on single documents rather thank pairs),
+        since ir-fgan requires to sample with two distributions.
         '''
-        stop_training = self.train_discriminator_generator_single_step(train_data=train_data, generator=generator, discriminator=discriminator, dict_buffer=dict_buffer)
+        stop_training = self.train_discriminator_generator_single_step(train_data=train_data, generator=generator,
+                                                               discriminator=discriminator, global_buffer=global_buffer)
         return stop_training
 
 
-    def train_discriminator_generator_single_step(self, train_data=None, generator=None, discriminator=None, num_samples_per_query=20, dict_buffer=None, **kwargs): # train both discriminator and generator with a single step per query
+    def train_discriminator_generator_single_step(self, train_data=None, generator=None, discriminator=None,
+                                                  global_buffer=None):
+        ''' Train both discriminator and generator with a single step per query '''
         stop_training = False
         for entry in train_data:
-            # todo assuming that unknown lable (i.e., -1) is converted to 0
-
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
             if gpu: batch_ranking = batch_ranking.type(tensor)
 
-            tmp_batch_label = torch.squeeze(batch_label, dim=0)
+            sorted_std_labels = torch.squeeze(batch_label, dim=0)
 
-            if torch.unique(tmp_batch_label).size(0) <2: # check unique values, say all [1, 1, 1] generates no pairs
+            num_pos, num_explicit, num_neg_unk, num_unk, num_unique_labels = global_buffer[qid]
+
+            if num_unique_labels <2: # check unique values, say all [1, 1, 1] generates no pairs
                 continue
 
-            ## record the original indices generate_true_pairs() relies on sorted tmp_batch_label
-            ranking_size = tmp_batch_label.size(0)
-            original_inds = torch.arange(ranking_size).type(long_tensor)
-            sorted_std_labels, sorted_inds = torch.sort(tmp_batch_label, descending=True)
-            sorted_original_inds = original_inds[sorted_inds]
-
-            tmp_true_head_inds, tmp_true_tail_inds = generate_true_pairs(sorted_std_labels=sorted_std_labels, num_pairs=num_samples_per_query, qid=qid, dict_weighted_clipped_pos_diffs=dict_buffer)
-
-            ## convert to original indices
-            true_head_inds, true_tail_inds = sorted_original_inds[tmp_true_head_inds], sorted_original_inds[tmp_true_tail_inds]
+            true_head_inds, true_tail_inds = generate_true_pairs(qid=qid, sorted_std_labels=sorted_std_labels,
+                             num_pairs=self.samples_per_query, dict_diff=self.dict_diff, global_buffer=global_buffer)
 
             batch_preds = generator.predict(batch_ranking, train=True)  # [batch, size_ranking]
 
@@ -97,17 +125,11 @@ class IRFGAN_Pair(AdversarialMachine):
                 return stop_training
 
             #--generate samples
-            if 'SR' == self.sampling_str:
-                mat_means = torch.unsqueeze(point_preds, dim=1) - torch.unsqueeze(point_preds, dim=0)
-                mat_probs = apply_Gaussian_Integral_0_Inf(mat_means, np.sqrt(2.0) * self.sigma)
-
-                fake_head_inds, fake_tail_inds = sample_points_Bernoulli(mat_probs, num_pairs=num_samples_per_query)
-
-            elif 'BT' == self.sampling_str:
+            if 'BT' == self.g_key:
                 mat_diffs = torch.unsqueeze(point_preds, dim=1) - torch.unsqueeze(point_preds, dim=0)
                 mat_bt_probs = torch.sigmoid(mat_diffs)  # default delta=1.0
 
-                fake_head_inds, fake_tail_inds = sample_points_Bernoulli(mat_bt_probs, num_pairs=num_samples_per_query)
+                fake_head_inds, fake_tail_inds = sample_points_Bernoulli(mat_bt_probs, num_pairs=self.samples_per_query)
             else:
                 raise NotImplementedError
             #--
@@ -136,10 +158,7 @@ class IRFGAN_Pair(AdversarialMachine):
             d_fake_tail_preds = discriminator.predict(fake_tail_docs)
             d_fake_preds = self.conjugate_f(self.activation_f(d_fake_head_preds - d_fake_tail_preds))
 
-            if 'SR' == self.sampling_str:
-                log_g_probs = torch.log(mat_probs[fake_head_inds, fake_tail_inds].view(1, -1))
-
-            elif 'BT' == self.sampling_str:
+            if 'BT' == self.g_key:
                 log_g_probs = torch.log(mat_bt_probs[fake_head_inds, fake_tail_inds].view(1, -1))
             else:
                 raise NotImplementedError
@@ -181,11 +200,10 @@ class IRFGAN_PairParameter(ModelParameter):
         f_div_id = 'KL'
         d_epoches, g_epoches = 1, 1
         ad_training_order = 'DG'
-        # ad_training_order = 'GD'
-        sampling_str = 'BT'
+        samples_per_query = 5
 
-        self.ad_para_dict = dict(model_id=self.model_id, d_epoches=d_epoches, g_epoches=g_epoches,
-                                 f_div_id=f_div_id, ad_training_order=ad_training_order, sampling_str=sampling_str)
+        self.ad_para_dict = dict(model_id=self.model_id, d_epoches=d_epoches, g_epoches=g_epoches, f_div_id=f_div_id,
+                                 ad_training_order=ad_training_order, samples_per_query=samples_per_query)
         return self.ad_para_dict
 
     def to_para_string(self, log=False, given_para_dict=None):
@@ -230,7 +248,6 @@ class IRFGAN_PairParameter(ModelParameter):
             #choice_d_g_epoch = [(1, 1)] if self.debug else [(1, 1)] # discriminator-epoches vs. generator-epoches
 
         for samples_per_query, f_div_id in product(choice_samples_per_query, choice_f_div_id):
-            self.ad_para_dict = dict(model_id=self.model_id, samples_per_query=samples_per_query, f_div_id=f_div_id
-                                     , sampling_str = 'BT')
+            self.ad_para_dict = dict(model_id=self.model_id, samples_per_query=samples_per_query, f_div_id=f_div_id)
 
             yield self.ad_para_dict

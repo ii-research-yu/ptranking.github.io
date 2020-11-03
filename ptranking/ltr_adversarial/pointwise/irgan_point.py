@@ -134,26 +134,8 @@ class IRGAN_Point(AdversarialMachine):
 
         return generated_data
 
-
-<<<<<<< HEAD
-    def per_query_generation(self, qid, batch_ranking, batch_label, generator):
-
-        used_batch_label = batch_label
-
-        if gpu: batch_ranking = batch_ranking.to(device)
-
-        # [1, ranking_size] -> [ranking_size]
-        # [z, n] If input has n dimensions, then the resulting indices tensor out is of size (z×n), where z is the total number of non-zero elements in the input tensor.
-        #all_pos_inds = torch.gt(torch.squeeze(used_batch_label), 0).nonzero()
-        all_pos_inds = torch.nonzero(torch.gt(torch.squeeze(used_batch_label), 0), as_tuple=False)
-        num_pos = all_pos_inds.size()[0]
-
-        if num_pos < 1:
-            return None
-=======
     def per_query_generation(self, qid, batch_ranking, generator, global_buffer):
         num_pos = global_buffer[qid]
->>>>>>> c3d88a325a14484d3e0b1fc77475a381f23fcc12
 
         if num_pos >= 1:
             valid_num = min(num_pos, self.samples_per_query)
@@ -201,12 +183,8 @@ class IRGAN_Point(AdversarialMachine):
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
             if gpu: batch_ranking = batch_ranking.to(device)
 
-<<<<<<< HEAD
-            pos_inds = torch.nonzero(torch.gt(torch.squeeze(batch_label), 0), as_tuple=False)
-=======
             num_pos = global_buffer[qid]
             if num_pos < 1: continue
->>>>>>> c3d88a325a14484d3e0b1fc77475a381f23fcc12
 
             ranking_inds = torch.arange(batch_ranking.size(1))
             pos_inds = ranking_inds[0:num_pos]

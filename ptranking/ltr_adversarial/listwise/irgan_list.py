@@ -100,7 +100,7 @@ class IRGAN_List(AdversarialMachine):
 
     def fill_global_buffer(self, train_data, dict_buffer=None):
         """ for listwise, no particular global information is required """
-        pass
+        assert train_data.presort is True
 
     def mini_max_train(self, train_data=None, generator=None, discriminator=None, global_buffer=None, per_query_ad_training=True):
         if per_query_ad_training:

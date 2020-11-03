@@ -76,46 +76,10 @@ class AdLTREvaluator(LTREvaluator):
         :return:
         """
         model_id = ad_para_dict['model_id']
-<<<<<<< HEAD
-        if model_id in ['IRGAN_Point', 'IRGAN_Pair']:
-            ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict,
-                                             temperature=ad_para_dict['temperature'],
-                                             d_epoches=ad_para_dict['d_epoches'], g_epoches=ad_para_dict['g_epoches'],
-                                             ad_training_order=ad_para_dict['ad_training_order'])
-        elif model_id == 'IRGAN_List':
-            ad_machine = IRGAN_List(eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict,
-                                     temperature=ad_para_dict['temperature'],
-                                     d_epoches=ad_para_dict['d_epoches'], g_epoches=ad_para_dict['g_epoches'],
-                                     samples_per_query=ad_para_dict['samples_per_query'], top_k=ad_para_dict['top_k'],
-                                     ad_training_order=ad_para_dict['ad_training_order'], PL=ad_para_dict['PL'],
-                                     shuffle_ties=ad_para_dict['shuffle_ties'], repTrick=ad_para_dict['repTrick'],
-                                     dropLog=ad_para_dict['dropLog'])
 
-        elif model_id == 'IRFGAN_Point':
+        if model_id in ['IRGAN_Point', 'IRGAN_Pair', 'IRGAN_List', 'IRFGAN_Point', 'IRFGAN_Pair', 'IRFGAN_List']:
             ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict,
-                                             f_div_id = ad_para_dict['f_div_id'])
-        elif model_id == 'IRFGAN_Pair':
-            ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict,
-                                             f_div_id=ad_para_dict['f_div_id'],
-                                             sampling_str='BT', sigma=1.0)
-        elif model_id == 'IRFGAN_List':
-            '''
-            eval_dict, data_dict, sf_para_dict=None, f_div_id='KL', temperature=None, d_epoches=1, g_epoches=1, samples_per_query=5, top_k=5,
-                 ad_training_order='GD', shuffle_ties=True, PL=True, repTrick=True, dropLog=False, optimal_train=False
-            '''
-            ad_machine = IRFGAN_List(eval_dict=eval_dict, data_dict=data_dict, sf_para_dict=sf_para_dict,
-                                     f_div_id=ad_para_dict['f_div_id'],
-                                    temperature=ad_para_dict['temperature'],
-                                    d_epoches=ad_para_dict['d_epoches'], g_epoches=ad_para_dict['g_epoches'],
-                                    samples_per_query=ad_para_dict['samples_per_query'], top_k=ad_para_dict['top_k'],
-                                    ad_training_order=ad_para_dict['ad_training_order'], PL=ad_para_dict['PL'],
-                                    shuffle_ties=ad_para_dict['shuffle_ties'], repTrick=ad_para_dict['repTrick'],
-                                    dropLog=ad_para_dict['dropLog'])
-=======
-        if model_id in ['IRGAN_Point', 'IRGAN_Pair', 'IRGAN_List']:
-            ad_machine = globals()[model_id](eval_dict=eval_dict, data_dict=data_dict,
-                                             sf_para_dict=sf_para_dict, ad_para_dict=ad_para_dict)
->>>>>>> c3d88a325a14484d3e0b1fc77475a381f23fcc12
+                                             ad_para_dict=ad_para_dict)
         else:
             raise NotImplementedError
 
@@ -178,22 +142,12 @@ class AdLTREvaluator(LTREvaluator):
             for epoch_k in range(1, epochs + 1):
                 if model_id == 'IR_GMAN_List':
                     stop_training = ad_machine.mini_max_train(train_data=train_data, generator=ad_machine.generator,
-<<<<<<< HEAD
-                                              pool_discriminator=ad_machine.pool_discriminator, dict_buffer=dict_buffer)
-=======
                                               pool_discriminator=ad_machine.pool_discriminator, global_buffer=global_buffer)
-
->>>>>>> c3d88a325a14484d3e0b1fc77475a381f23fcc12
                     g_ranker = ad_machine.get_generator()
                     d_ranker = ad_machine.pool_discriminator[0]
                 else:
                     stop_training = ad_machine.mini_max_train(train_data=train_data, generator=ad_machine.generator,
-<<<<<<< HEAD
-                                              discriminator=ad_machine.discriminator, dict_buffer=dict_buffer)
-=======
                                               discriminator=ad_machine.discriminator, global_buffer=global_buffer)
-
->>>>>>> c3d88a325a14484d3e0b1fc77475a381f23fcc12
                     g_ranker = ad_machine.get_generator()
                     d_ranker = ad_machine.get_discriminator()
 
