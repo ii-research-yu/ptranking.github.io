@@ -45,7 +45,7 @@ class IRFGAN_List(AdversarialMachine):
         self.temperature = ad_para_dict['temperature']
         self.ad_training_order = ad_para_dict['ad_training_order']
         self.samples_per_query = ad_para_dict['samples_per_query']
-        self.PL_discriminator = ad_para_dict['PL']
+        self.PL_discriminator = ad_para_dict['PL_D']
         self.replace_trick_4_generator = ad_para_dict['repTrick']
         self.drop_discriminator_log_4_reward = ad_para_dict['dropLog']
         self.optimal_train = optimal_train
@@ -431,12 +431,12 @@ class IRFGAN_ListParameter(ModelParameter):
 
         prefix = s1.join([str(d_epoches), str(g_epoches), '{:,g}'.format(temperature), ad_training_order])
 
-        top_k, PL, repTrick, dropLog = ad_para_dict['top_k'], ad_para_dict['PL'], ad_para_dict['repTrick'], \
+        top_k, PL_D, repTrick, dropLog = ad_para_dict['top_k'], ad_para_dict['PL_D'], ad_para_dict['repTrick'], \
                                        ad_para_dict['dropLog']
 
         top_k_str = 'topAll' if top_k is None else 'top' + str(top_k)
         s_str = 'S' + str(ad_para_dict['samples_per_query'])
-        df_str = 'PL' if PL else 'BT'
+        df_str = 'PLD' if PL_D else 'BTD'
         prefix = s1.join([prefix, top_k_str, s_str, df_str])
 
         if repTrick: prefix += '_Rep'
@@ -464,7 +464,7 @@ class IRFGAN_ListParameter(ModelParameter):
                 choice_d_g_epoch.append((int(epoch_arr[0]), int(epoch_arr[1])))
 
             choice_top_k = json_dict['top_k']
-            choice_PL = json_dict['PL']
+            choice_PL_D = json_dict['PL_D']
             choice_repTrick = json_dict['repTrick']
             choice_dropLog = json_dict['dropLog']
         else:
@@ -476,7 +476,7 @@ class IRFGAN_ListParameter(ModelParameter):
 
             # settings that are specific to a listwise method#
             choice_top_k = [5]
-            choice_PL = [True]  # discriminator formulation
+            choice_PL_D = [True]  # discriminator formulation
             choice_repTrick = [False]  # for generator
             choice_dropLog = [True]  # drop log of discriminator when optimise generator
 
@@ -488,10 +488,10 @@ class IRFGAN_ListParameter(ModelParameter):
                                      samples_per_query=samples_per_query, temperature=temperature, f_div_id=f_div_id,
                                      ad_training_order=ad_training_order)
 
-            for top_k, PL, repTrick, dropLog in product(choice_top_k, choice_PL, choice_repTrick, choice_dropLog):
+            for top_k, PL_D, repTrick, dropLog in product(choice_top_k, choice_PL_D, choice_repTrick, choice_dropLog):
                 ad_list_para_dict = dict()
                 ad_list_para_dict['top_k'] = top_k
-                ad_list_para_dict['PL'] = PL
+                ad_list_para_dict['PL_D'] = PL_D
                 ad_list_para_dict['repTrick'] = repTrick
                 ad_list_para_dict['dropLog'] = dropLog
                 self.ad_para_dict.update(ad_list_para_dict)

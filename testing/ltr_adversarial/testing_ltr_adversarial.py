@@ -47,29 +47,23 @@ if __name__ == '__main__':
 
     """
 
-    debug = True  # in a debug mode, we just check whether the model can operate
+    debug = False  # in a debug mode, we just check whether the model can operate
 
-    config_with_json = False  # specify configuration with json files or not
+    config_with_json = True  # specify configuration with json files or not
 
     models_to_run = [
         #'IRGAN_Point',
-<<<<<<< HEAD
         #'IRGAN_Pair',
         #'IRGAN_List'
         #'IRFGAN_Point',
         #'IRFGAN_Pair',
         'IRFGAN_List'
-=======
-        'IRGAN_Pair',
-        #'IRGAN_List'
->>>>>>> 5e91c9b06436d54344e6c4ae1e8d2005bfa8bc77
     ]
 
     evaluator = AdLTREvaluator()
 
     if config_with_json:  # specify configuration with json files
         # the directory of json files
-<<<<<<< HEAD
         #dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/ecir2021/irgan/mq2008_json/'
         #dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/ecir2021/irgan/mq2008_semi_json/'
 
@@ -78,10 +72,6 @@ if __name__ == '__main__':
 
         #dir_json = '/Users/dryuhaitao/WorkBench/Dropbox/CodeBench/GitPool/irgan_ptranking/testing/ltr_adversarial/json/'
 
-=======
-        dir_json = '/Users/dryuhaitao/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adversarial/json/'
-        #dir_json = '/home/dl-box/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adversarial/json/'
->>>>>>> 5e91c9b06436d54344e6c4ae1e8d2005bfa8bc77
         for model_id in models_to_run:
             evaluator.run(debug=debug, model_id=model_id, config_with_json=config_with_json, dir_json=dir_json)
 
@@ -89,13 +79,13 @@ if __name__ == '__main__':
         data_id = 'MQ2008_Super'
 
         ''' location of the adopted data '''
-        #dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
-        dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
+        dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
+        #dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
         #dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
 
         ''' output directory '''
-        #dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/ALTR/'
-        dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
+        dir_output = '/Users/dryuhaitao/WorkBench/CodeBench/Bench_Output/NeuralLTR/ALTR/'
+        #dir_output = '/home/dl-box/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/Listwise/'
         #dir_output = '/Users/solar/WorkBench/CodeBench/PyCharmProject/Project_output/Out_L2R/'
 
         grid_search = False # with grid_search, we can explore the effects of different hyper-parameters of a model

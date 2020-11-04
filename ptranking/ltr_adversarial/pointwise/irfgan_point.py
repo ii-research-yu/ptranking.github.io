@@ -23,9 +23,10 @@ class IRFGAN_Point(AdversarialMachine):
         super(IRFGAN_Point, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
 
         self.f_div_id = ad_para_dict['f_div_id']
-        self.d_epoches = ad_para_dict['d_epoches']
-        self.g_epoches = ad_para_dict['g_epoches']
-        self.ad_training_order = ad_para_dict['ad_training_order']
+        ''' muted due to default train_discriminator_generator_single_step() '''
+        #self.d_epoches = ad_para_dict['d_epoches']
+        #self.g_epoches = ad_para_dict['g_epoches']
+        #self.ad_training_order = ad_para_dict['ad_training_order']
         self.samples_per_query = ad_para_dict['samples_per_query']
 
         self.activation_f, self.conjugate_f = get_f_divergence_functions(self.f_div_id)
