@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     """
 
-    debug = False  # in a debug mode, we just check whether the model can operate
+    debug = True  # in a debug mode, we just check whether the model can operate
 
     config_with_json = True  # specify configuration with json files or not
 
@@ -55,9 +55,9 @@ if __name__ == '__main__':
         #'IRGAN_Point',
         #'IRGAN_Pair',
         #'IRGAN_List'
-        #'IRFGAN_Point',
+        'IRFGAN_Point',
         #'IRFGAN_Pair',
-        'IRFGAN_List'
+        #'IRFGAN_List'
     ]
 
     evaluator = AdLTREvaluator()
