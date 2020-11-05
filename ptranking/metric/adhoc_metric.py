@@ -31,7 +31,7 @@ def torch_precision_at_k(batch_sys_sorted_labels, k=None, gpu=False):
 											else (torch.arange(used_cutoff).expand_as(batch_sys_cumsum_reles) + 1.0)
 
 	batch_sys_rankwise_precision = batch_sys_cumsum_reles / batch_ranks
-	batch_sys_p_at_k = batch_sys_rankwise_precision[:, used_cutoff-1]
+	batch_sys_p_at_k = batch_sys_rankwise_precision[:, used_cutoff-1:used_cutoff]
 	return batch_sys_p_at_k
 
 def torch_precision_at_ks(batch_sys_sorted_labels, ks=None, gpu=False):
@@ -88,7 +88,7 @@ def torch_ap_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, gp
 
 	batch_std_cumsum_reles = torch.cumsum(batch_ideal_sorted_labels, dim=1)
 	batch_sys_rankwise_ap = batch_sys_cumsum_precision / batch_std_cumsum_reles[:, 0:used_cutoff]
-	batch_sys_ap_at_k = batch_sys_rankwise_ap[:, used_cutoff-1]
+	batch_sys_ap_at_k = batch_sys_rankwise_ap[:, used_cutoff-1:used_cutoff]
 	return batch_sys_ap_at_k
 
 def torch_ap_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, gpu=False):
@@ -149,26 +149,26 @@ def torch_rankwise_err(batch_sorted_labels, max_label=None, k=10, point=True, gp
 	batch_expt_satis_ranks = batch_expt_ranks * batch_satis_probs * batch_cascad_unsatis_probs  # w.r.t. all rank positions
 
 	if point: # a specific position
-		batch_err_at_k = torch.sum(batch_expt_satis_ranks, dim=1)
+		batch_err_at_k = torch.sum(batch_expt_satis_ranks, dim=1, keepdim=True)
 		return batch_err_at_k
 	else:
 		batch_rankwise_err = torch.cumsum(batch_expt_satis_ranks, dim=1)
 		return batch_rankwise_err
 
-def torch_nerr_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, label_type=LABEL_TYPE.MultiLabel):
+def torch_nerr_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, gpu=False, label_type=LABEL_TYPE.MultiLabel):
 	valid_max_cutoff = batch_sys_sorted_labels.size(1)
 	cutoff = min(valid_max_cutoff, k)
 
 	if LABEL_TYPE.MultiLabel == label_type:
 		max_label = torch.max(batch_ideal_sorted_labels)
-		batch_sys_err_at_k = torch_rankwise_err(batch_sys_sorted_labels, max_label=max_label, k=cutoff, point=True)
-		batch_ideal_err_at_k = torch_rankwise_err(batch_ideal_sorted_labels, max_label=max_label, k=cutoff, point=True)
+		batch_sys_err_at_k = torch_rankwise_err(batch_sys_sorted_labels, max_label=max_label, k=cutoff, point=True, gpu=gpu)
+		batch_ideal_err_at_k = torch_rankwise_err(batch_ideal_sorted_labels, max_label=max_label, k=cutoff, point=True, gpu=gpu)
 		batch_nerr_at_k = batch_sys_err_at_k / batch_ideal_err_at_k
 		return batch_nerr_at_k
 	else:
 		raise NotImplementedError
 
-def torch_nerr_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, label_type=LABEL_TYPE.MultiLabel):
+def torch_nerr_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, gpu=False, label_type=LABEL_TYPE.MultiLabel):
 	'''
 	:param sys_sorted_labels: [batch_size, ranking_size] the standard labels sorted in descending order according to predicted relevance scores
 	:param ks:
@@ -183,8 +183,8 @@ def torch_nerr_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None
 	inds = torch.from_numpy(np.asarray(used_ks) - 1)
 
 	if LABEL_TYPE.MultiLabel == label_type:
-		batch_sys_rankwise_err = torch_rankwise_err(batch_sys_sorted_labels, max_label=max_label, k=max_cutoff, point=False)
-		batch_ideal_rankwise_err = torch_rankwise_err(batch_ideal_sorted_labels, max_label=max_label, k=max_cutoff, point=False)
+		batch_sys_rankwise_err = torch_rankwise_err(batch_sys_sorted_labels, max_label=max_label, k=max_cutoff, point=False, gpu=gpu)
+		batch_ideal_rankwise_err = torch_rankwise_err(batch_ideal_sorted_labels, max_label=max_label, k=max_cutoff, point=False, gpu=gpu)
 		batch_rankwise_nerr = batch_sys_rankwise_err/batch_ideal_rankwise_err
 		batch_nerr_at_ks = batch_rankwise_nerr[:, inds]
 		if need_padding:
@@ -241,20 +241,20 @@ def torch_dcg_at_ks(batch_sorted_labels, max_cutoff, label_type=LABEL_TYPE.Multi
 	batch_dcg_at_ks = torch.cumsum(batch_numerators/batch_discounts, dim=1)   # dcg w.r.t. each position
 	return batch_dcg_at_ks
 
-def torch_nDCG_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, label_type=LABEL_TYPE.MultiLabel):
-	batch_sys_dcg_at_k = torch_dcg_at_k(batch_sys_sorted_labels, cutoff=k, label_type=label_type) # only using the cumulative gain at the final rank position
-	batch_ideal_dcg_at_k = torch_dcg_at_k(batch_ideal_sorted_labels, cutoff=k, label_type=label_type)
+def torch_nDCG_at_k(batch_sys_sorted_labels, batch_ideal_sorted_labels, k=None, gpu=False, label_type=LABEL_TYPE.MultiLabel):
+	batch_sys_dcg_at_k = torch_dcg_at_k(batch_sys_sorted_labels, cutoff=k, label_type=label_type, gpu=gpu) # only using the cumulative gain at the final rank position
+	batch_ideal_dcg_at_k = torch_dcg_at_k(batch_ideal_sorted_labels, cutoff=k, label_type=label_type, gpu=gpu)
 	batch_ndcg_at_k = batch_sys_dcg_at_k / batch_ideal_dcg_at_k
 	return batch_ndcg_at_k
 
-def torch_nDCG_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, label_type=LABEL_TYPE.MultiLabel):
+def torch_nDCG_at_ks(batch_sys_sorted_labels, batch_ideal_sorted_labels, ks=None, gpu=False, label_type=LABEL_TYPE.MultiLabel):
 	valid_max_cutoff = batch_sys_sorted_labels.size(1)
 	used_ks = [k for k in ks if k<=valid_max_cutoff] if valid_max_cutoff < max(ks) else ks
 
 	inds = torch.from_numpy(np.asarray(used_ks) - 1)
-	batch_sys_dcgs = torch_dcg_at_ks(batch_sys_sorted_labels, max_cutoff=max(used_ks), label_type=label_type)
+	batch_sys_dcgs = torch_dcg_at_ks(batch_sys_sorted_labels, max_cutoff=max(used_ks), label_type=label_type, gpu=gpu)
 	batch_sys_dcg_at_ks = batch_sys_dcgs[:, inds]  # get cumulative gains at specified rank positions
-	batch_ideal_dcgs = torch_dcg_at_ks(batch_ideal_sorted_labels, max_cutoff=max(used_ks), label_type=label_type)
+	batch_ideal_dcgs = torch_dcg_at_ks(batch_ideal_sorted_labels, max_cutoff=max(used_ks), label_type=label_type, gpu=gpu)
 	batch_ideal_dcg_at_ks = batch_ideal_dcgs[:, inds]
 
 	batch_ndcg_at_ks = batch_sys_dcg_at_ks / batch_ideal_dcg_at_ks
