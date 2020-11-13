@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     """
 
-    debug = True  # in a debug mode, we just check whether the model can operate
+    debug = False  # in a debug mode, we just check whether the model can operate
 
     config_with_json = True  # specify configuration with json files or not
 
@@ -56,7 +56,7 @@ if __name__ == '__main__':
         #'IRGAN_Pair',
         #'IRGAN_List'
         'IRFGAN_Point',
-        #'IRFGAN_Pair',
+        'IRFGAN_Pair',
         #'IRFGAN_List'
     ]
 
@@ -65,10 +65,10 @@ if __name__ == '__main__':
     if config_with_json:  # specify configuration with json files
         # the directory of json files
         #dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/ecir2021/irgan/mq2008_json/'
-        #dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/ecir2021/irgan/mq2008_semi_json/'
+        dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/ecir2021/irgan/ms30k_json/'
 
-        dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/ecir2021/irfgan/mq2008_json/'
-        #dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/ecir2021/irfgan/mq2008_semi_json/'
+        #dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/ecir2021/irfgan/mq2008_json/'
+        dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/ecir2021/irfgan/ms30k_json/'
 
         #dir_json = '/Users/dryuhaitao/WorkBench/Dropbox/CodeBench/GitPool/irgan_ptranking/testing/ltr_adversarial/json/'
 

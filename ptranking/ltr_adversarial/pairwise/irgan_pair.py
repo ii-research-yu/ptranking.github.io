@@ -139,9 +139,8 @@ class IRGAN_Pair(AdversarialMachine):
 
     def per_query_generation(self, qid, batch_ranking, generator, global_buffer):
         num_pos, num_neg_unk = global_buffer[qid]
-
-        if num_pos >= 1:
-            valid_num = min(num_pos, num_neg_unk, self.samples_per_query)
+        valid_num = min(num_pos, num_neg_unk, self.samples_per_query)
+        if num_pos >= 1 and valid_num >=1:
             ranking_inds = torch.arange(batch_ranking.size(1))
             '''
             intersection implementation (keeping consistent with the released irgan-tensorflow):
@@ -196,9 +195,10 @@ class IRGAN_Pair(AdversarialMachine):
             if gpu: batch_ranking = batch_ranking.to(device)
 
             num_pos, num_neg_unk = global_buffer[qid]
-            if num_pos < 1: continue
-
             valid_num = min(num_pos, num_neg_unk, self.samples_per_query)
+
+            if num_pos < 1 or valid_num < 1:
+                continue
 
             pos_inds = torch.randperm(num_pos)[0:valid_num]  # randomly select positive documents
 

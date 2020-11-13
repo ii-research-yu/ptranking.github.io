@@ -136,9 +136,8 @@ class IRGAN_Point(AdversarialMachine):
 
     def per_query_generation(self, qid, batch_ranking, generator, global_buffer):
         num_pos = global_buffer[qid]
-
-        if num_pos >= 1:
-            valid_num = min(num_pos, self.samples_per_query)
+        valid_num = min(num_pos, self.samples_per_query)
+        if num_pos >= 1 and valid_num >= 1:
             pos_inds = torch.randperm(num_pos)[0:valid_num] # randomly select positive documents
 
             if gpu: batch_ranking = batch_ranking.to(device) # [batch, size_ranking]
