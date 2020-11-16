@@ -14,13 +14,10 @@ from ptranking.ltr_adversarial.pointwise.point_generator import Point_Generator
 from ptranking.ltr_adversarial.util.f_divergence import get_f_divergence_functions
 from ptranking.ltr_adversarial.pointwise.point_discriminator import Point_Discriminator
 
-from ptranking.ltr_global import global_gpu as gpu, global_device as device
-
-
 class IRFGAN_Point(AdversarialMachine):
     '''  '''
-    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None):
-        super(IRFGAN_Point, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
+    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None, gpu=False, device=None):
+        super(IRFGAN_Point, self).__init__(eval_dict=eval_dict, data_dict=data_dict, gpu=gpu, device=device)
 
         self.f_div_id = ad_para_dict['f_div_id']
         ''' muted due to default train_discriminator_generator_single_step() '''
@@ -92,7 +89,7 @@ class IRFGAN_Point(AdversarialMachine):
             qid, batch_ranking = entry[0], entry[1]
 
             if qid in generated_data:
-                if gpu: batch_ranking = batch_ranking.to(device)
+                if self.gpu: batch_ranking = batch_ranking.to(self.device)
 
                 pos_inds, neg_inds = generated_data[qid]
 
@@ -170,7 +167,7 @@ class IRFGAN_Point(AdversarialMachine):
         ''' Train both discriminator and generator with a single step per query '''
         for entry in train_data:
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
-            if gpu: batch_ranking = batch_ranking.to(device)
+            if self.gpu: batch_ranking = batch_ranking.to(self.device)
 
             num_pos = global_buffer[qid]
             if num_pos < 1: continue

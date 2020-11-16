@@ -16,18 +16,16 @@ from ptranking.ltr_adversarial.pointwise.point_discriminator import Point_Discri
 from ptranking.data.data_utils import MSLETOR_SEMI
 from ptranking.ltr_adversarial.util.pair_sampling import generate_true_pairs, sample_points_Bernoulli
 
-
-from ptranking.ltr_global import global_gpu as gpu, tensor, long_tensor
-
 class IRFGAN_Pair(AdversarialMachine):
     ''' '''
-    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None, g_key='BT', sigma=1.0):
-        super(IRFGAN_Pair, self).__init__(eval_dict=eval_dict, data_dict=data_dict)
+    def __init__(self, eval_dict, data_dict, sf_para_dict=None, ad_para_dict=None, g_key='BT', sigma=1.0, gpu=False, device=None):
+        super(IRFGAN_Pair, self).__init__(eval_dict=eval_dict, data_dict=data_dict, gpu=gpu, device=device)
 
         self.f_div_id = ad_para_dict['f_div_id']
         self.samples_per_query = ad_para_dict['samples_per_query']
         self.activation_f, self.conjugate_f = get_f_divergence_functions(self.f_div_id)
         self.dict_diff = dict()
+        self.tensor = torch.cuda.FloatTensor if self.gpu else torch.FloatTensor
 
         assert g_key=='BT'
         '''
@@ -102,7 +100,7 @@ class IRFGAN_Pair(AdversarialMachine):
         stop_training = False
         for entry in train_data:
             qid, batch_ranking, batch_label = entry[0], entry[1], entry[2]
-            if gpu: batch_ranking = batch_ranking.type(tensor)
+            if self.gpu: batch_ranking = batch_ranking.type(self.tensor)
 
             sorted_std_labels = torch.squeeze(batch_label, dim=0)
 
@@ -169,7 +167,8 @@ class IRFGAN_Pair(AdversarialMachine):
             g_batch_loss.backward()
             generator.optimizer.step()
 
-            return stop_training
+        # after iteration ove train_data
+        return stop_training
 
     def reset_generator(self):
         self.generator.reset_parameters()
