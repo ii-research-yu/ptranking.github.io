@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     """
 
-    cuda = 1                    # the gpu id, e.g., 0 or 1, otherwise, set it as None indicating to use cpu
+    cuda = 0                    # the gpu id, e.g., 0 or 1, otherwise, set it as None indicating to use cpu
 
     debug = True                # in a debug mode, we just check whether the model can operate
 
@@ -55,11 +55,16 @@ if __name__ == '__main__':
 
     models_to_run = [
         #'IRGAN_Point',
+<<<<<<< HEAD
         #'IRGAN_Pair',
         #'IRGAN_List'
         'IRFGAN_Point',
         'IRFGAN_Pair',
         #'IRFGAN_List'
+=======
+        'IRGAN_Pair',
+        'IRGAN_List'
+>>>>>>> 88bdab20e6689c0378993b3dd9cb8816bf6dd588
     ]
 
     evaluator = AdLTREvaluator(cuda=cuda)

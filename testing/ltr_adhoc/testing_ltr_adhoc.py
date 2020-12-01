@@ -41,33 +41,36 @@ if __name__ == '__main__':
     -----------------------------------------------------------------------------------------
 
     """
-	#todo 1> json file / grid, etc for adhoc, adv, tree w.r.t. presort, batch_size
 
 	cuda = 0				# the gpu id, e.g., 0 or 1, otherwise, set it as None indicating to use cpu
 
-	debug = True            # in a debug mode, we just check whether the model can operate
+	debug = False            # in a debug mode, we just check whether the model can operate
 
 	config_with_json = True # specify configuration with json files or not
 
 	models_to_run = [
 		#'RankMSE',
-		#'RankNet',
-		#'LambdaRank',
+		'RankNet',
+		'LambdaRank',
 		#'ListNet',
-		#'ListMLE',
+		'ListMLE',
 		#'RankCosine',
 		#'ApproxNDCG',
-		'WassRank',
-		'STListNet',
-		'LambdaLoss'
+		#'WassRank',
+		#'STListNet',
+		#'LambdaLoss'
 	]
 
 	evaluator = LTREvaluator(cuda=cuda)
 
 	if config_with_json: # specify configuration with json files
 		# the directory of json files
-		dir_json = '/Users/dryuhaitao/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
+		#dir_json = '/Users/dryuhaitao/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
 		#dir_json = '/Users/solar/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
+		#dir_json = '/home/dl-box/WorkBench/Dropbox/CodeBench/GitPool/wildltr_ptranking/testing/ltr_adhoc/json/'
+
+		data_id = 'yahoo'
+		dir_json = '/home/dl-box/WorkBench/ExperimentBench/ALTR/sigir2021/rankingmdn/'+data_id+'/'
 
 		for model_id in models_to_run:
 			evaluator.run(debug=debug, model_id=model_id, config_with_json=config_with_json, dir_json=dir_json)
@@ -81,7 +84,7 @@ if __name__ == '__main__':
 
 		''' Location of the adopted data '''
 		#dir_data = '/Users/dryuhaitao/WorkBench/Corpus/' + 'LETOR4.0/MQ2008/'
-		dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2007/'
+		dir_data = '/home/dl-box/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
 		#dir_data = '/Users/solar/WorkBench/Datasets/L2R/LETOR4.0/MQ2008/'
 
 		#data_id = 'Istella_X'
