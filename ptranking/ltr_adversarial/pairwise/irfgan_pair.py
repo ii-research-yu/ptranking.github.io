@@ -36,7 +36,7 @@ class IRFGAN_Pair(AdversarialMachine):
         self.g_key = g_key
         self.sigma = sigma # only used w.r.t. SR
 
-        sf_para_dict['ffnns']['apply_tl_af'] = True
+        #sf_para_dict['ffnns']['apply_tl_af'] = True
         g_sf_para_dict = sf_para_dict
 
         d_sf_para_dict = copy.deepcopy(g_sf_para_dict)
